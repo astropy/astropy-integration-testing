@@ -28,4 +28,3 @@ jobs:
         - linux: py310-specreduce
         - linux: py310-specutils
         - linux: py310-sunpy
-        - linux: py310-lightkurve
