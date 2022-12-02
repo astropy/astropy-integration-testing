@@ -13,8 +13,9 @@ permissions:
 # These only prove that basic test suite in Linux works.
 # It is up to the individual packages to do detailed testing with astropy RC.
 jobs:
-  uses: OpenAstronomy/github-actions-workflows/.github/workflows/tox.yml@v1
-  with:
+  test:
+    uses: OpenAstronomy/github-actions-workflows/.github/workflows/tox.yml@v1
+    with:
       submodules: false
       envs: |
         - linux: py310-asdf_astropy
