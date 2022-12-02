@@ -1,16 +1,17 @@
-Integration testing for the astropy ecosystem
+Integration testing for the Astropy ecosystem
 =============================================
 
-This repository is a work in progress to develop a way to do integration testing
-across the astropy ecosystem to ensure that the core and coordinated packages
+This repository is a way to do integration testing
+across the Astropy ecosystem to ensure that the core and coordinated packages
 work well together.
 
-For now, you can test the latest astropy release with the latest coordinated
-package releases (along with a few third-party packages that depend heavily
-on astropy). Pre-releases are used if available. To run the tests, run:
+The tests here only do basic testings for those packages on Linux.
+Individual packages should still do the due diligence to test against
+dev and/or pre-release versions of `astropy` on their own to be sure.
 
-    $ tox
+To run these tests on GitHub Action as a maintainer of this repo:
 
-or you can even run all environments in parallel with e.g.:
-
-    $ tox --parallel 16
+1. Goto Actions tab.
+2. Select `astropy_rc_basic` job.
+3. Click "Run workflow" dropdown and then the green "Run workflow" button.
+4. A new run should kick off after a few seconds. Monitor the logs of this run.
