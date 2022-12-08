@@ -17,6 +17,7 @@ jobs:
     uses: OpenAstronomy/github-actions-workflows/.github/workflows/tox.yml@v1
     with:
       submodules: false
+      toxdeps: "'tox<4'"
       envs: |
         - linux: py310-asdf_astropy
         - linux: py310-astropy_healpix
