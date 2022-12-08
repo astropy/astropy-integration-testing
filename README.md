@@ -1,6 +1,8 @@
 Integration testing for the Astropy ecosystem
 =============================================
 
+[![Integration Status](https://github.com/astropy/astropy-integration-testing/workflows/astropy_rc_basic/badge.svg)](https://github.com/astropy/astropy-integration-testing/actions)
+
 This repository is a way to do integration testing
 across the Astropy ecosystem to ensure that the core and coordinated packages
 work well together.
