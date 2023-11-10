@@ -1,0 +1,8 @@
+[tool.pytest.ini_options]
+astropy_header = true
+doctest_plus = "enabled"
+text_file_format = "rst"
+filterwarnings = [
+    "ignore:numpy\\.ufunc size changed:RuntimeWarning",
+    "ignore:numpy\\.ndarray size changed:RuntimeWarning",
+]

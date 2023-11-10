@@ -1,6 +1,7 @@
 name: astropy_rc_basic
 
 on:
+  pull_request:
   workflow_dispatch:
 
 concurrency:
@@ -17,15 +18,14 @@ jobs:
     uses: OpenAstronomy/github-actions-workflows/.github/workflows/tox.yml@v1
     with:
       submodules: false
-      toxdeps: "'tox<4'"
       envs: |
-        - linux: py310-asdf_astropy
-        - linux: py310-astropy_healpix
-        - linux: py310-astroquery
-        - linux: py310-ccdproc
-        - linux: py310-photutils
-        - linux: py310-regions
-        - linux: py310-reproject
-        - linux: py310-specreduce
-        - linux: py310-specutils
-        - linux: py310-sunpy
+        - linux: py311-asdf_astropy
+        - linux: py311-astropy_healpix
+        - linux: py311-astroquery
+        - linux: py311-ccdproc
+        - linux: py311-photutils
+        - linux: py311-regions
+        - linux: py311-reproject
+        - linux: py311-specreduce
+        - linux: py311-specutils
+        - linux: py311-sunpy
