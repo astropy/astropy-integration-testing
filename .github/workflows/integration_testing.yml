@@ -1,7 +1,6 @@
 name: astropy_rc_basic
 
 on:
-  pull_request:
   workflow_dispatch:
 
 concurrency:
