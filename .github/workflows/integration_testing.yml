@@ -27,4 +27,5 @@ jobs:
         - linux: py311-reproject
         - linux: py311-specreduce
         - linux: py311-specutils
-        - linux: py311-sunpy
+        # FIXME: Chained dependencies in sunpy/setup.cfg not working here.
+        #- linux: py311-sunpy
