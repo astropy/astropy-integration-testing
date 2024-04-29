@@ -1,1 +1,3 @@
 .tox
+.hypothesis
+result_images
