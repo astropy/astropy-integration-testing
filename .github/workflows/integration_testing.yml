@@ -15,7 +15,7 @@ permissions:
 # It is up to the individual packages to do detailed testing with astropy RC.
 jobs:
   test:
-    uses: OpenAstronomy/github-actions-workflows/.github/workflows/tox.yml@v1
+    uses: OpenAstronomy/github-actions-workflows/.github/workflows/tox.yml@924441154cf3053034c6513d5e06c69d262fb9a6  # v1.13.0
     with:
       submodules: false
       envs: |
