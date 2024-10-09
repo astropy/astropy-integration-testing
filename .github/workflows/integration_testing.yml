@@ -19,23 +19,23 @@ jobs:
     with:
       submodules: false
       envs: |
-        - linux: py311-asdf_astropy
-        - linux: py311-asdf_astropy-dev
-        - linux: py311-astropy_healpix
-        - linux: py311-astropy_healpix-dev
-        - linux: py311-astroquery
-        - linux: py311-astroquery-dev
-        - linux: py311-ccdproc
-        - linux: py311-ccdproc-dev
-        - linux: py311-photutils
-        - linux: py311-photutils-dev
-        - linux: py311-regions
-        - linux: py311-regions-dev
-        - linux: py311-reproject
-        - linux: py311-reproject-dev
-        - linux: py311-specreduce
-        - linux: py311-specreduce-dev
-        - linux: py311-specutils
-        - linux: py311-specutils-dev
-        - linux: py311-sunpy
-        - linux: py311-sunpy-dev
+        - linux: py313-asdf_astropy
+        - linux: py313-asdf_astropy-dev
+        - linux: py313-astropy_healpix
+        - linux: py313-astropy_healpix-dev
+        - linux: py313-astroquery
+        - linux: py313-astroquery-dev
+        - linux: py313-ccdproc
+        - linux: py313-ccdproc-dev
+        - linux: py313-photutils
+        - linux: py313-photutils-dev
+        - linux: py313-regions
+        - linux: py313-regions-dev
+        - linux: py313-reproject
+        - linux: py313-reproject-dev
+        - linux: py313-specreduce
+        - linux: py313-specreduce-dev
+        - linux: py313-specutils
+        - linux: py313-specutils-dev
+        - linux: py313-sunpy
+        - linux: py313-sunpy-dev
