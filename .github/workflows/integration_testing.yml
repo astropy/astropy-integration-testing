@@ -23,8 +23,6 @@ jobs:
         - linux: py311-asdf_astropy-dev
         - linux: py311-astropy_healpix
         - linux: py311-astropy_healpix-dev
-        - linux: py311-astroquery
-        - linux: py311-astroquery-dev
         - linux: py311-ccdproc
         - linux: py311-ccdproc-dev
         - linux: py311-photutils
