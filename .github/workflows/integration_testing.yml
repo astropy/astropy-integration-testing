@@ -35,5 +35,5 @@ jobs:
         - linux: py311-specreduce-dev
         - linux: py311-specutils
         - linux: py311-specutils-dev
-        - linux: py311-sunpy
-        - linux: py311-sunpy-dev
+        - linux: py312-sunpy
+        - linux: py312-sunpy-dev
