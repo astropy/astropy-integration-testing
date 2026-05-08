@@ -20,20 +20,20 @@ jobs:
       submodules: false
       envs: |
         - linux: py311-asdf_astropy
-        - linux: py311-asdf_astropy-dev
+        - linux: py315-asdf_astropy-dev
         - linux: py311-astropy_healpix
-        - linux: py311-astropy_healpix-dev
+        - linux: py315-astropy_healpix-dev
         - linux: py311-ccdproc
-        - linux: py311-ccdproc-dev
+        - linux: py315-ccdproc-dev
         - linux: py311-photutils
-        - linux: py311-photutils-dev
+        - linux: py315-photutils-dev
         - linux: py311-regions
-        - linux: py311-regions-dev
+        - linux: py315-regions-dev
         - linux: py311-reproject
-        - linux: py311-reproject-dev
+        - linux: py315-reproject-dev
         - linux: py311-specreduce
-        - linux: py311-specreduce-dev
+        - linux: py315-specreduce-dev
         - linux: py311-specutils
-        - linux: py311-specutils-dev
+        - linux: py315-specutils-dev
         - linux: py312-sunpy
-        - linux: py312-sunpy-dev
+        - linux: py315-sunpy-dev
