@@ -2,18 +2,23 @@
 {% block title %}Astropy integration matrix{% endblock %}
 {% block body %}
 <h1>Astropy ecosystem integration matrix</h1>
-<div class="meta"><dl>
-  {% for v in variants %}
-  <dt>{{ v.name }}</dt>
-  <dd>{% if v.has_data %}
-    astropy {{ v.astropy_version }}{% if v.extra_index_urls %} <small style="color:#999">(nightly)</small>{% endif %},
-    Python {{ v.python_version }},
-    started <code>{{ v.started_at }}</code>{% if v.finished_at %}, finished <code>{{ v.finished_at }}</code>{% endif %} &middot;
-    <a href="variants/{{ v.name }}.html">variant detail</a>
-  {% else %}<em>no results</em>{% endif %}</dd>
-  {% endfor %}
-</dl></div>
-<p>Each row is a package. Each column is an astropy variant. Click any badge for the package's test log in that variant; click "variant detail" for the variant's full <code>pip freeze</code> and per-package install outcome.</p>
+
+<table class="meta-table">
+<thead><tr><th>Variant</th><th>Astropy</th><th>Python</th><th>Started</th><th>Finished</th></tr></thead>
+<tbody>
+{% for v in variants %}
+<tr>
+  <td><code>{{ v.name }}</code></td>
+  <td>{% if v.has_data %}{{ v.astropy_version }}{% if v.extra_index_urls %} <small style="color:#999">(nightly)</small>{% endif %}{% else %}-{% endif %}</td>
+  <td>{% if v.has_data %}{{ v.python_version }}{% else %}-{% endif %}</td>
+  <td>{% if v.has_data %}{{ v.started_at }}{% else %}-{% endif %}</td>
+  <td>{% if v.has_data %}{{ v.finished_at or "(in progress)" }}{% else %}-{% endif %}</td>
+</tr>
+{% endfor %}
+</tbody>
+</table>
+
+<h2>Matrix</h2>
 <table class="matrix">
 <thead><tr>
   <th>Package</th>
@@ -26,9 +31,11 @@
   {% for v in variants %}
   {% set cell = row.cells[v.name] %}
   <td>
-    {% if cell.detail_filename %}
-    <a class="cell-link" href="cells/{{ cell.detail_filename }}"><span class="pill {{ cell.status }}">{{ cell.label }}</span></a>
-    {% else %}<span class="pill {{ cell.status }}">{{ cell.label }}</span>{% endif %}
+    {% if cell.anchor %}
+    <a class="cell-link" href="#{{ cell.anchor }}"><span class="pill {{ cell.status }}">{{ cell.label }}</span></a>
+    {% else %}
+    <span class="pill {{ cell.status }}">{{ cell.label }}</span>
+    {% endif %}
     {% if cell.resolved_version %}<br><small style="color:#999">{{ cell.resolved_version }}</small>{% endif %}
   </td>
   {% endfor %}
@@ -36,6 +43,7 @@
 {% endfor %}
 </tbody>
 </table>
+
 <div class="legend">Legend:
   <span class="pill pass">pass</span>
   <span class="pill fail">fail</span>
@@ -46,4 +54,42 @@
   <span class="pill missing">missing</span>
 </div>
 <p class="legend"><strong>skipped</strong>: resolver couldn't satisfy this package alongside the rest of the venv. <strong>install fail</strong>: install step crashed for some other reason (build error, etc.).</p>
+
+{% if failures %}
+<h2>Failure logs</h2>
+<p class="legend">Click any non-passing badge above to jump to its log; the section will auto-expand.</p>
+{% for f in failures %}
+<details id="{{ f.anchor }}">
+  <summary>
+    <span class="pkg-name">{{ f.name }}</span>
+    <small style="color:#6a737d">({{ f.variant }})</small>
+    <span class="pill {{ f.status }}">{{ f.label }}</span>
+  </summary>
+  {% if f.install_error %}
+  <h3>Install error</h3>
+  <pre>{{ f.install_error }}</pre>
+  {% endif %}
+  {% if f.test_output %}
+  <h3>Test output</h3>
+  <pre>{{ f.test_output }}</pre>
+  {% endif %}
+</details>
+{% endfor %}
+{% else %}
+<p class="legend">No failures &mdash; every package passed in every variant that ran.</p>
+{% endif %}
+
+<script>
+function openTarget() {
+  const id = location.hash.slice(1);
+  if (!id) return;
+  const el = document.getElementById(id);
+  if (el && el.tagName === "DETAILS") {
+    el.open = true;
+    el.scrollIntoView({behavior: "instant", block: "start"});
+  }
+}
+openTarget();
+addEventListener("hashchange", openTarget);
+</script>
 {% endblock %}

@@ -42,7 +42,7 @@ What's in the repo
 |-------------------------------------|------------------------------------------------------|
 | `packages.yaml`                     | The list of packages tested (one block per package). |
 | `run_integration.py`                | Runs one variant: resolve specs, install, test, write `results/<variant>.json`. |
-| `build_dashboard.py`                | Reads `results/*.json`, renders `site/`.             |
+| `build_dashboard.py`                | Reads `results/*.json`, renders `site/index.html` (single self-contained page). |
 | `status.py`                         | Shared status vocabulary (used by both scripts).     |
 | `templates/`                        | HTML/CSS for the dashboard.                          |
 | `.github/workflows/integration.yml` | The new matrix workflow (variant x3 + dashboard).    |
@@ -107,12 +107,12 @@ PR previews
 
 `integration-matrix` also runs on pull requests. Same three-variant
 matrix as the scheduled run, just with a different final step: the
-`dashboard` job builds a single-page summary (`build_dashboard.py
---single-page`) and uploads it as a non-zipped artifact
-(`actions/upload-artifact@v7` with `archive: false`). The companion
-`preview-link` workflow attaches a "View dashboard preview" status
-check to the commit whose "Details" link opens the rendered page
-directly in the browser.
+`dashboard` job uploads `site/index.html` as a non-zipped artifact
+(`actions/upload-artifact@v7` with `archive: false`) instead of
+publishing to gh-pages. The companion `preview-link` workflow
+attaches a "View dashboard preview" status check to the commit
+whose "Details" link opens the rendered page directly in the
+browser.
 
 This means the PR preview reflects *this PR's actual matrix run*,
 not last main's data. It's also slower than a render-only preview

@@ -77,27 +77,21 @@ jobs:
           merge-multiple: true
           path: results/
 
-      # PR path: single-page summary, uploaded as a non-zipped artifact
-      # that GitHub's artifact viewer can render directly in the browser.
-      - name: Build single-page dashboard (PR preview)
-        if: github.event_name == 'pull_request'
-        run: python build_dashboard.py --single-page
+      - name: Build dashboard
+        run: python build_dashboard.py
 
-      - name: Upload single-page preview
+      # PR path: upload index.html as a non-zipped artifact for the
+      # in-browser preview (linked from a PR check by preview-link.yml).
+      - name: Upload preview artifact
         if: github.event_name == 'pull_request'
         uses: actions/upload-artifact@v7
         with:
           name: dashboard-preview
-          path: site/dashboard.html
+          path: site/index.html
           archive: false
           overwrite: true
 
-      # Main / schedule / dispatch path: full multi-page dashboard
-      # published to gh-pages.
-      - name: Build full dashboard
-        if: github.event_name != 'pull_request'
-        run: python build_dashboard.py
-
+      # Main / schedule / dispatch path: publish to gh-pages.
       - name: Publish to gh-pages
         if: github.event_name != 'pull_request'
         uses: peaceiris/actions-gh-pages@v4

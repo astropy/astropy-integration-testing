@@ -47,6 +47,7 @@ sys.stdout.reconfigure(line_buffering=True)
 
 PYPI_JSON_URL = "https://pypi.org/pypi/{name}/json"
 ASTROPY_NIGHTLY_INDEX = "https://pypi.anaconda.org/astropy/simple"
+LIBERFA_NIGHTLY_INDEX = "https://pypi.anaconda.org/liberfa/simple"  # for pyerfa dev wheels
 PYTHON_VERSION = "3.12"
 
 
@@ -107,11 +108,19 @@ def resolve_specs(packages, variant):
         # channel; we read the installed version back after install. No
         # explicit pin avoids the PEP 440 local-version segment headaches
         # that astropy's nightly wheels have (e.g. 8.1.0.dev53+gabcdef).
+        #
+        # `--index-strategy unsafe-best-match` is required because uv's
+        # default ("first-index") only considers a single index per
+        # package; astropy/simple hosts astropy AND pyerfa (the channel's
+        # latest wheels sometimes ship only musllinux). unsafe-best-match
+        # lets uv fall back to PyPI when the channel's only wheels don't
+        # match the runner platform.
         astropy = {
             "install": "astropy",
             "version": "",
-            "extra_index_urls": [ASTROPY_NIGHTLY_INDEX],
+            "extra_index_urls": [ASTROPY_NIGHTLY_INDEX, LIBERFA_NIGHTLY_INDEX],
             "prerelease_strategy": "allow",
+            "index_strategy": "unsafe-best-match",
         }
 
         def pkg_spec(pkg):
@@ -128,6 +137,7 @@ def resolve_specs(packages, variant):
             "version": astropy_ver,
             "extra_index_urls": [],
             "prerelease_strategy": "allow" if include_pre else "if-necessary-or-explicit",
+            "index_strategy": None,
         }
 
         def pkg_spec(pkg):
@@ -275,12 +285,15 @@ def run_variant(variant, packages, repo_root, results_dir, timeouts):
         for url in astropy["extra_index_urls"]:
             common += ["--extra-index-url", url]
         common += [f"--prerelease={astropy['prerelease_strategy']}"]
+        if astropy.get("index_strategy"):
+            common += [f"--index-strategy={astropy['index_strategy']}"]
 
         print("\nInstalling astropy + pytest...")
         rc, err = _run_install(common + [astropy["install"], "pytest", "pytest-timeout"],
                                timeouts["install"])
         if rc != 0:
             print("  FATAL: astropy install failed")
+            print(err)
             result["fatal_error"] = err
             return result, out_path
         result["astropy"]["version"] = _pkg_version(python, "astropy") or result["astropy"]["version"]
@@ -323,6 +336,7 @@ def run_variant(variant, packages, repo_root, results_dir, timeouts):
                 else:
                     entry["install_status"] = status.INSTALL_FAIL
                     print("  install failed")
+                print(err)
             result["packages"].append(entry)
 
         result["installed_deps"] = _freeze(python)
@@ -409,10 +423,16 @@ def main():
 
     timeouts = {"install": args.timeout_install, "test": args.timeout_test}
     variants_to_run = [args.variant] if args.variant else list(status.VARIANTS)
+    fatal_variants = []
     for variant in variants_to_run:
         result, out_path = run_variant(variant, packages, repo_root, results_dir, timeouts)
         print(f"\nDone {variant}: {_counts(result)}")
         print(f"Wrote {out_path}")
+        if result.get("fatal_error"):
+            fatal_variants.append(variant)
+
+    if fatal_variants:
+        sys.exit(f"\nAstropy install failed for variant(s): {', '.join(fatal_variants)}")
 
 
 if __name__ == "__main__":

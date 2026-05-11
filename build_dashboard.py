@@ -1,15 +1,10 @@
 #!/usr/bin/env python
-"""Build the static integration-matrix dashboard.
+"""Build the single-page integration-matrix dashboard.
 
-Reads the per-variant JSONs from results/ (stable.json, latest.json,
-dev.json - any missing variant just shows as missing cells) and emits:
-
-  site/index.html              Nx3 matrix
-  site/cells/<pkg>__<v>.html   per-(package, variant) detail page
-  site/variants/<v>.html       per-variant detail with full freeze
-
-Publishing to gh-pages is done from CI via a published action; this
-script only builds locally.
+Reads the per-variant JSONs from results/ (stable.json, pre.json,
+dev.json - any missing variant just shows as missing cells) and emits
+a single self-contained `site/index.html` with the matrix, a legend,
+and collapsible per-cell failure logs.
 """
 
 import argparse
@@ -23,6 +18,10 @@ import status
 
 
 VARIANTS = status.VARIANTS
+
+
+def _anchor_id(name, variant):
+    return f"log-{name}__{variant}"
 
 
 def _variant_meta(name, data):
@@ -64,19 +63,22 @@ def _make_rows(by_variant, names):
                 entry = next((e for e in data["packages"] if e["name"] == name), None)
             if entry is None:
                 cells[v] = {"status": "missing", "label": "-",
-                            "detail_filename": "", "resolved_version": ""}
+                            "anchor": "", "resolved_version": ""}
             else:
+                badge = status.cell_badge(entry)
+                anchor = (_anchor_id(name, v)
+                          if badge["status"] not in ("pass", "missing") else "")
                 cells[v] = {
-                    **status.cell_badge(entry),
-                    "detail_filename": f"{name}__{v}.html",
+                    **badge,
+                    "anchor": anchor,
                     "resolved_version": entry.get("resolved_version", ""),
                 }
         rows.append({"name": name, "cells": cells})
     return rows
 
 
-def _issues(by_variant):
-    """List non-passing cells with a one-line error excerpt where available."""
+def _failures(by_variant):
+    """List non-passing cells with their full logs."""
     out = []
     for v in VARIANTS:
         data = by_variant[v]
@@ -86,23 +88,19 @@ def _issues(by_variant):
             badge = status.cell_badge(entry)
             if badge["status"] in ("pass", "missing"):
                 continue
-            excerpt = ""
-            for line in (entry.get("install_error") or "").splitlines():
-                line = line.strip()
-                if line:
-                    excerpt = line[:200]
-                    break
             out.append({
                 "name": entry["name"],
                 "variant": v,
                 "status": badge["status"],
                 "label": badge["label"],
-                "error_excerpt": excerpt,
+                "install_error": entry.get("install_error", ""),
+                "test_output": entry.get("test_output", ""),
+                "anchor": _anchor_id(entry["name"], v),
             })
     return out
 
 
-def build(results_dir, output_dir, templates_dir, single_page=False):
+def build(results_dir, output_dir, templates_dir):
     results_dir = Path(results_dir)
     output_dir = Path(output_dir)
     if output_dir.exists():
@@ -122,55 +120,16 @@ def build(results_dir, output_dir, templates_dir, single_page=False):
     names = _ordered_packages(by_variant)
     rows = _make_rows(by_variant, names)
     variants_meta = [_variant_meta(v, by_variant[v]) for v in VARIANTS]
-
-    if single_page:
-        single_tpl = env.get_template("single_page.html")
-        (output_dir / "dashboard.html").write_text(
-            single_tpl.render(
-                variants=variants_meta,
-                rows=rows,
-                issues=_issues(by_variant),
-            )
-        )
-        print(f"Wrote dashboard.html to {output_dir}/")
-        return
-
-    (output_dir / "cells").mkdir()
-    (output_dir / "variants").mkdir()
-    index_tpl = env.get_template("index.html")
-    cell_tpl = env.get_template("cell.html")
-    variant_tpl = env.get_template("variant.html")
+    failures = _failures(by_variant)
 
     (output_dir / "index.html").write_text(
-        index_tpl.render(variants=variants_meta, rows=rows)
-    )
-    n_pages = 1
-
-    for v in VARIANTS:
-        data = by_variant[v]
-        if not data:
-            continue
-        for entry in data["packages"]:
-            (output_dir / "cells" / f"{entry['name']}__{v}.html").write_text(
-                cell_tpl.render(
-                    entry=entry,
-                    variant=v,
-                    status=status.cell_badge(entry),
-                    astropy_version=data["astropy"]["version"],
-                )
-            )
-            n_pages += 1
-        (output_dir / "variants" / f"{v}.html").write_text(
-            variant_tpl.render(
-                variant=v,
-                data=data,
-                install_badge=status.INSTALL_BADGE,
-                test_badge=status.TEST_BADGE,
-            )
+        env.get_template("index.html").render(
+            variants=variants_meta,
+            rows=rows,
+            failures=failures,
         )
-        n_pages += 1
-
-    print(f"Wrote {n_pages} pages to {output_dir}/")
+    )
+    print(f"Wrote {output_dir}/index.html")
 
 
 def main():
@@ -178,13 +137,8 @@ def main():
     ap.add_argument("--results-dir", default="results")
     ap.add_argument("--output", default="site")
     ap.add_argument("--templates-dir", default="templates")
-    ap.add_argument("--single-page", action="store_true",
-                    help="Render a single self-contained dashboard.html (no cell or "
-                         "variant pages). Suitable for serving as a non-zipped GH "
-                         "Actions artifact in PR previews.")
     args = ap.parse_args()
-    build(args.results_dir, args.output, args.templates_dir,
-          single_page=args.single_page)
+    build(args.results_dir, args.output, args.templates_dir)
 
 
 if __name__ == "__main__":

@@ -24,5 +24,7 @@ jobs:
       - uses: agriyakhetarpal/github-actions-artifacts-redirector-action@683d25ace2cb0aefe8e6719c39c2ac7f3d22dd8c
         with:
           repo-token: ${{ secrets.GITHUB_TOKEN }}
-          artifact-name: dashboard-preview
+          # With `archive: false`, artifact-name is the uploaded file's
+          # basename without extension (we upload site/index.html).
+          artifact-name: index
           job-title: View dashboard preview
