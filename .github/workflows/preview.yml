@@ -1,0 +1,115 @@
+name: dashboard-preview
+
+on:
+  pull_request:
+
+permissions:
+  contents: read
+  actions: read         # to find and download the latest main run's results
+  pull-requests: write  # to (re)post the preview link comment
+
+concurrency:
+  group: dashboard-preview-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v3
+
+      - name: Install runtime deps
+        run: uv pip install --system jinja2
+
+      - name: Find latest successful main run
+        id: latest
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          run_id=$(gh run list \
+            --workflow=integration.yml \
+            --branch=main \
+            --status=success \
+            --limit=1 \
+            --json databaseId \
+            --jq '.[0].databaseId // empty')
+          if [ -z "$run_id" ]; then
+            echo "No successful main integration runs yet; preview will render with no results."
+          else
+            echo "Using main run $run_id"
+          fi
+          echo "run_id=$run_id" >> "$GITHUB_OUTPUT"
+
+      - name: Download main run results
+        if: steps.latest.outputs.run_id != ''
+        uses: actions/download-artifact@v8
+        with:
+          pattern: results-*
+          merge-multiple: true
+          path: results/
+          run-id: ${{ steps.latest.outputs.run_id }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build single-page dashboard
+        run: python build_dashboard.py --single-page
+
+      - name: Upload dashboard as non-zipped artifact
+        id: upload
+        uses: actions/upload-artifact@v7
+        with:
+          name: dashboard-preview
+          path: site/dashboard.html
+          archive: false
+          # Keep one preview around per PR; the new upload supersedes the old one.
+          overwrite: true
+
+      - name: Comment preview link on PR
+        if: github.event.pull_request.head.repo.full_name == github.repository
+        continue-on-error: true
+        uses: actions/github-script@v7
+        env:
+          ARTIFACT_URL: ${{ steps.upload.outputs.artifact-url }}
+          MAIN_RUN_ID: ${{ steps.latest.outputs.run_id }}
+        with:
+          script: |
+            const url = process.env.ARTIFACT_URL;
+            const mainRun = process.env.MAIN_RUN_ID;
+            const dataSource = mainRun
+              ? `Rendered against the latest successful main integration run (#${mainRun}).`
+              : `No main integration runs have completed yet, so the matrix shows no results.`;
+            const body = [
+              "**Dashboard preview**: " + url,
+              "",
+              dataSource,
+              "",
+              "<sub>Rebuilt on every push to this PR. Open the link above, then click `dashboard.html` to view in the browser.</sub>",
+            ].join("\n");
+
+            const { data: comments } = await github.rest.issues.listComments({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+              per_page: 100,
+            });
+            const tag = "**Dashboard preview**";
+            const existing = comments.find(c =>
+              c.user.type === "Bot" && c.body && c.body.startsWith(tag));
+            if (existing) {
+              await github.rest.issues.updateComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                comment_id: existing.id,
+                body,
+              });
+            } else {
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: context.issue.number,
+                body,
+              });
+            }

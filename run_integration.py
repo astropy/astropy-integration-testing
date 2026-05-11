@@ -236,7 +236,7 @@ def _run_install(install_cmd, timeout):
         proc = subprocess.run(install_cmd, capture_output=True, text=True, timeout=timeout)
     except subprocess.TimeoutExpired:
         return None, "timeout during install"
-    return proc.returncode, (proc.stderr or proc.stdout)[-3000:]
+    return proc.returncode, (proc.stderr or proc.stdout)
 
 
 def run_variant(variant, packages, repo_root, results_dir, timeouts):
@@ -273,7 +273,7 @@ def run_variant(variant, packages, repo_root, results_dir, timeouts):
         venv_proc = subprocess.run(["uv", "venv", venv, "-p", py_path, "-q"],
                                    capture_output=True, text=True, timeout=120)
         if venv_proc.returncode != 0:
-            result["fatal_error"] = f"uv venv: {(venv_proc.stderr or venv_proc.stdout)[-500:]}"
+            result["fatal_error"] = f"uv venv: {venv_proc.stderr or venv_proc.stdout}"
             return result, out_path
         python = os.path.join(venv, "bin", "python")
         result["python_version"] = _venv_python_version(python)
@@ -353,9 +353,9 @@ def run_variant(variant, packages, repo_root, results_dir, timeouts):
                 print(f"  timeout after {entry['duration']}s")
                 continue
             entry["duration"] = round(time.time() - start, 1)
-            out = proc.stdout[-50000:]
+            out = proc.stdout
             if proc.stderr:
-                out += "\n--- stderr ---\n" + proc.stderr[-5000:]
+                out += "\n--- stderr ---\n" + proc.stderr
             entry["test_output"] = out
 
             no_module = (

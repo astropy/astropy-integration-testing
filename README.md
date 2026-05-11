@@ -101,3 +101,24 @@ Triggering a run from GitHub
 
 The legacy `astropy_rc_basic` (tox-based) workflow is still present
 and triggerable separately.
+
+PR previews
+-----------
+
+`dashboard-preview` runs on every pull request. It downloads the
+results JSONs from the most recent successful main `integration-matrix`
+run, builds a single-page `dashboard.html` with `build_dashboard.py
+--single-page`, and uploads it as a non-zipped artifact
+(`actions/upload-artifact@v7` with `archive: false`). A bot comment
+on the PR links to the artifact; clicking through opens the page
+directly in the browser.
+
+This is fast (under a minute) because it doesn't re-run the test
+matrix; it only re-renders the dashboard with the PR's changes to
+`packages.yaml`, `build_dashboard.py`, or `templates/` applied to
+the latest real data. To actually validate a new package install,
+trigger the full `integration-matrix` workflow manually.
+
+Preview is skipped for pull requests from forked repositories (the
+build still runs but the PR comment is suppressed; reviewers can
+still open the artifact link from the workflow run page).

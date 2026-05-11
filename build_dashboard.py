@@ -75,31 +75,71 @@ def _make_rows(by_variant, names):
     return rows
 
 
-def build(results_dir, output_dir, templates_dir):
+def _issues(by_variant):
+    """List non-passing cells with a one-line error excerpt where available."""
+    out = []
+    for v in VARIANTS:
+        data = by_variant[v]
+        if not data:
+            continue
+        for entry in data["packages"]:
+            badge = status.cell_badge(entry)
+            if badge["status"] in ("pass", "missing"):
+                continue
+            excerpt = ""
+            for line in (entry.get("install_error") or "").splitlines():
+                line = line.strip()
+                if line:
+                    excerpt = line[:200]
+                    break
+            out.append({
+                "name": entry["name"],
+                "variant": v,
+                "status": badge["status"],
+                "label": badge["label"],
+                "error_excerpt": excerpt,
+            })
+    return out
+
+
+def build(results_dir, output_dir, templates_dir, single_page=False):
     results_dir = Path(results_dir)
     output_dir = Path(output_dir)
     if output_dir.exists():
         shutil.rmtree(output_dir)
-    (output_dir / "cells").mkdir(parents=True)
-    (output_dir / "variants").mkdir(parents=True)
+    output_dir.mkdir(parents=True)
 
     env = Environment(
         loader=FileSystemLoader(str(templates_dir)),
         autoescape=select_autoescape(["html"]),
     )
-    index_tpl = env.get_template("index.html")
-    cell_tpl = env.get_template("cell.html")
-    variant_tpl = env.get_template("variant.html")
 
     by_variant = {
         v: (json.loads((results_dir / f"{v}.json").read_text())
             if (results_dir / f"{v}.json").exists() else None)
         for v in VARIANTS
     }
-
     names = _ordered_packages(by_variant)
     rows = _make_rows(by_variant, names)
     variants_meta = [_variant_meta(v, by_variant[v]) for v in VARIANTS]
+
+    if single_page:
+        single_tpl = env.get_template("single_page.html")
+        (output_dir / "dashboard.html").write_text(
+            single_tpl.render(
+                variants=variants_meta,
+                rows=rows,
+                issues=_issues(by_variant),
+            )
+        )
+        print(f"Wrote dashboard.html to {output_dir}/")
+        return
+
+    (output_dir / "cells").mkdir()
+    (output_dir / "variants").mkdir()
+    index_tpl = env.get_template("index.html")
+    cell_tpl = env.get_template("cell.html")
+    variant_tpl = env.get_template("variant.html")
 
     (output_dir / "index.html").write_text(
         index_tpl.render(variants=variants_meta, rows=rows)
@@ -138,8 +178,13 @@ def main():
     ap.add_argument("--results-dir", default="results")
     ap.add_argument("--output", default="site")
     ap.add_argument("--templates-dir", default="templates")
+    ap.add_argument("--single-page", action="store_true",
+                    help="Render a single self-contained dashboard.html (no cell or "
+                         "variant pages). Suitable for serving as a non-zipped GH "
+                         "Actions artifact in PR previews.")
     args = ap.parse_args()
-    build(args.results_dir, args.output, args.templates_dir)
+    build(args.results_dir, args.output, args.templates_dir,
+          single_page=args.single_page)
 
 
 if __name__ == "__main__":
