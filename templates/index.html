@@ -3,6 +3,14 @@
 {% block body %}
 <h1>Astropy ecosystem integration matrix</h1>
 
+{% if short_timeout %}
+<div class="banner">
+  <strong>Preview run:</strong> per-package test timeout set to <code>{{ short_timeout }}s</code>
+  for fast PR feedback. Many tests will time out; treat the matrix as a layout/workflow
+  check, not a real regression signal.
+</div>
+{% endif %}
+
 <table class="meta-table">
 <thead><tr><th>Python</th><th>Variant</th><th>Astropy</th><th>Started</th><th>Finished</th></tr></thead>
 <tbody>
@@ -30,7 +38,11 @@
 </tr>
 </thead>
 <tbody>
-{% for row in rows %}
+{% for tier, group in tier_groups %}
+<tr class="tier-header">
+  <th colspan="{{ 1 + pythons|length * variants|length }}">{{ tier|capitalize }}</th>
+</tr>
+{% for row in group %}
 <tr>
   <td><span class="pkg-name">{{ row.name }}</span></td>
   {% for cell in row.cells %}
@@ -44,6 +56,7 @@
   </td>
   {% endfor %}
 </tr>
+{% endfor %}
 {% endfor %}
 </tbody>
 </table>

@@ -268,6 +268,7 @@ def run_variant(variant, python_version, packages, repo_root, results_dir, timeo
         },
         "python_requested": python_version,
         "python_version": "",
+        "timeout_test_seconds": timeouts["test"],
         "fatal_error": "",
         "installed_deps": {},
         "packages": [],
@@ -297,8 +298,14 @@ def run_variant(variant, python_version, packages, repo_root, results_dir, timeo
             common += [f"--index-strategy={astropy['index_strategy']}"]
 
         print("\nInstalling astropy + pytest...")
-        rc, err = _run_install(common + [astropy["install"], "pytest", "pytest-timeout"],
-                               timeouts["install"])
+        # pytest-remotedata registers the `remote_data` marker many
+        # astropy ecosystem packages use; with the plugin installed but
+        # `--remote-data` not passed, those tests are skipped automatically
+        # instead of running and timing out on network calls.
+        rc, err = _run_install(
+            common + [astropy["install"], "pytest", "pytest-timeout", "pytest-remotedata"],
+            timeouts["install"],
+        )
         if rc != 0:
             print("  FATAL: astropy install failed")
             print(err)

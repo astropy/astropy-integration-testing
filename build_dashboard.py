@@ -90,6 +90,7 @@ def _make_rows(by_combo, names, columns):
     rows = []
     for name in names:
         cells = []
+        row_tier = None
         for python, variant in columns:
             data = by_combo.get((variant, python))
             entry = None
@@ -101,6 +102,8 @@ def _make_rows(by_combo, names, columns):
                     "anchor": "", "resolved_version": "",
                 })
                 continue
+            if row_tier is None:
+                row_tier = entry.get("tier", "coordinated")
             badge = status.cell_badge(entry)
             anchor = (_anchor_id(name, variant, python)
                       if badge["status"] not in ("pass", "missing") else "")
@@ -109,8 +112,15 @@ def _make_rows(by_combo, names, columns):
                 "anchor": anchor,
                 "resolved_version": entry.get("resolved_version", ""),
             })
-        rows.append({"name": name, "cells": cells})
+        rows.append({"name": name, "tier": row_tier or "coordinated", "cells": cells})
     return rows
+
+
+def _group_rows_by_tier(rows):
+    """Group rows by tier, preserving order. Returns [(tier, [rows]), ...]."""
+    from itertools import groupby
+    return [(tier, list(group))
+            for tier, group in groupby(rows, key=lambda r: r["tier"])]
 
 
 def _failures(by_combo, columns):
@@ -153,17 +163,25 @@ def build(results_dir, output_dir, templates_dir):
     pythons, columns = _column_groups(by_combo)
     names = _ordered_packages(by_combo)
     rows = _make_rows(by_combo, names, columns)
+    tier_groups = _group_rows_by_tier(rows)
     failures = _failures(by_combo, columns)
     variants_meta = [_variant_meta(v, p, by_combo.get((v, p)))
                      for p in pythons for v in VARIANTS]
+
+    # If any variant ran with an unusually short test timeout, surface
+    # it in a banner; that's typical for PR preview runs.
+    timeouts = {d.get("timeout_test_seconds") for d in by_combo.values()
+                if d and d.get("timeout_test_seconds")}
+    short_timeout = min((t for t in timeouts if t and t < 600), default=None)
 
     (output_dir / "index.html").write_text(
         env.get_template("index.html").render(
             pythons=pythons,
             variants=list(VARIANTS),
             variants_meta=variants_meta,
-            rows=rows,
+            tier_groups=tier_groups,
             failures=failures,
+            short_timeout=short_timeout,
         )
     )
     print(f"Wrote {output_dir}/index.html")

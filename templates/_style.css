@@ -6,6 +6,10 @@ table { border-collapse: collapse; }
 th, td { border: 1px solid #ddd; padding: 6px 10px; text-align: left; vertical-align: top; }
 th { background: #f6f8fa; }
 th.python-group { text-align: center; border-bottom: 2px solid #ccc; }
+.banner { background: #fff8c5; border: 1px solid #d4a72c; padding: 0.75em 1em;
+          border-radius: 6px; margin: 1em 0; }
+tr.tier-header th { background: #eef2f6; text-align: left; font-weight: 600;
+                    text-transform: lowercase; letter-spacing: 0.5px; color: #444; }
 .meta dl { margin: 0.3em 0; display: grid; grid-template-columns: max-content 1fr; gap: 0.2em 1em; color: #444; }
 .meta dt { font-weight: 600; }
 .pill { display: inline-block; padding: 2px 10px; border-radius: 12px; font-size: 0.85em; font-weight: 600; min-width: 4em; text-align: center; }

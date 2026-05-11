@@ -82,3 +82,228 @@ packages:
     repo_url: https://github.com/sunpy/sunpy.git
     install_extras: [tests, all]
     pytest_args: ["-c", "sunpy_pytest.ini"]
+
+  # --- Affiliated packages auto-imported from
+  # https://github.com/astropy/astropy.github.com/blob/main/affiliated/registry.json
+  # Module names defaulted to pypi_name with hyphens/dots replaced by underscores;
+  # individual packages may need overrides if pytest --pyargs fails to find them.
+  - pypi_name: agnpy
+    tier: affiliated
+    module: agnpy
+    repo_url: https://github.com/cosimoNigro/agnpy.git
+
+  - pypi_name: APLpy
+    tier: affiliated
+    module: APLpy
+    repo_url: https://github.com/aplpy/aplpy.git
+
+  - pypi_name: astroalign
+    tier: affiliated
+    module: astroalign
+    repo_url: https://github.com/quatrope/astroalign.git
+
+  - pypi_name: astroML
+    tier: affiliated
+    module: astroML
+    repo_url: https://github.com/astroML/astroML.git
+
+  - pypi_name: astroplan
+    tier: affiliated
+    module: astroplan
+    repo_url: https://github.com/astropy/astroplan.git
+
+  - pypi_name: astroscrappy
+    tier: affiliated
+    module: astroscrappy
+    repo_url: https://github.com/astropy/astroscrappy.git
+
+  - pypi_name: baseband
+    tier: affiliated
+    module: baseband
+    repo_url: https://github.com/mhvk/baseband.git
+
+  - pypi_name: BayesicFitting
+    tier: affiliated
+    module: BayesicFitting
+    repo_url: https://github.com/dokester/BayesicFitting.git
+
+  - pypi_name: cluster-lensing
+    tier: affiliated
+    module: cluster_lensing
+    repo_url: https://github.com/jesford/cluster-lensing.git
+
+  - pypi_name: corral-pipeline
+    tier: affiliated
+    module: corral_pipeline
+    repo_url: https://github.com/toros-astro/corral.git
+
+  - pypi_name: dust_extinction
+    tier: affiliated
+    module: dust_extinction
+    repo_url: https://github.com/karllark/dust_extinction.git
+
+  - pypi_name: einsteinpy
+    tier: affiliated
+    module: einsteinpy
+    repo_url: https://github.com/einsteinpy/einsteinpy.git
+
+  - pypi_name: feets
+    tier: affiliated
+    module: feets
+    repo_url: https://github.com/carpyncho/feets.git
+
+  - pypi_name: gala
+    tier: affiliated
+    module: gala
+    repo_url: https://github.com/adrn/gala.git
+
+  - pypi_name: galpy
+    tier: affiliated
+    module: galpy
+    repo_url: https://github.com/jobovy/galpy.git
+
+  - pypi_name: gammapy
+    tier: affiliated
+    module: gammapy
+    repo_url: https://github.com/gammapy/gammapy.git
+
+  - pypi_name: ginga
+    tier: affiliated
+    module: ginga
+    repo_url: https://github.com/ejeschke/ginga.git
+
+  - pypi_name: glueviz
+    tier: affiliated
+    module: glueviz
+    repo_url: https://github.com/glue-viz/glue.git
+
+  - pypi_name: gwcs
+    tier: affiliated
+    module: gwcs
+    repo_url: https://github.com/spacetelescope/gwcs.git
+
+  - pypi_name: halotools
+    tier: affiliated
+    module: halotools
+    repo_url: https://github.com/astropy/halotools.git
+
+  - pypi_name: hendrics
+    tier: affiliated
+    module: hendrics
+    repo_url: https://github.com/StingraySoftware/HENDRICS.git
+
+  - pypi_name: hips
+    tier: affiliated
+    module: hips
+    repo_url: https://github.com/hipspy/hips.git
+
+  - pypi_name: imexam
+    tier: affiliated
+    module: imexam
+    repo_url: https://github.com/spacetelescope/imexam.git
+
+  - pypi_name: kanon
+    tier: affiliated
+    module: kanon
+    repo_url: https://github.com/legau/kanon.git
+
+  - pypi_name: lenstronomy
+    tier: affiliated
+    module: lenstronomy
+    repo_url: https://github.com/lenstronomy/lenstronomy.git
+
+  - pypi_name: ligo.skymap
+    tier: affiliated
+    module: ligo_skymap
+    repo_url: https://git.ligo.org/lscsoft/ligo.skymap.git
+
+  - pypi_name: linetools
+    tier: affiliated
+    module: linetools
+    repo_url: https://github.com/linetools/linetools.git
+
+  - pypi_name: marxs
+    tier: affiliated
+    module: marxs
+    repo_url: https://github.com/Chandra-MARX/marxs.git
+
+  - pypi_name: mocpy
+    tier: affiliated
+    module: mocpy
+    repo_url: https://github.com/cds-astro/mocpy.git
+
+  - pypi_name: naima
+    tier: affiliated
+    module: naima
+    repo_url: https://github.com/zblz/naima.git
+
+  - pypi_name: omnifit
+    tier: affiliated
+    module: omnifit
+    repo_url: https://github.com/RiceMunk/omnifit.git
+
+  - pypi_name: poliastro
+    tier: affiliated
+    module: poliastro
+    repo_url: https://github.com/poliastro/poliastro.git
+
+  - pypi_name: pycbc
+    tier: affiliated
+    module: pycbc
+    repo_url: https://github.com/gwastro/pycbc.git
+
+  - pypi_name: pydl
+    tier: affiliated
+    module: pydl
+    repo_url: https://github.com/weaverba137/pydl.git
+
+  - pypi_name: pyregion
+    tier: affiliated
+    module: pyregion
+    repo_url: https://github.com/astropy/pyregion.git
+
+  - pypi_name: pyspeckit
+    tier: affiliated
+    module: pyspeckit
+    repo_url: https://github.com/pyspeckit/pyspeckit.git
+
+  - pypi_name: pyvo
+    tier: affiliated
+    module: pyvo
+    repo_url: https://github.com/astropy/pyvo.git
+
+  - pypi_name: regularizepsf
+    tier: affiliated
+    module: regularizepsf
+    repo_url: https://github.com/punch-mission/regularizepsf.git
+
+  - pypi_name: sbpy
+    tier: affiliated
+    module: sbpy
+    repo_url: https://github.com/NASA-Planetary-Science/sbpy.git
+
+  - pypi_name: sncosmo
+    tier: affiliated
+    module: sncosmo
+    repo_url: https://github.com/sncosmo/sncosmo.git
+
+  - pypi_name: spectral-cube
+    tier: affiliated
+    module: spectral_cube
+    repo_url: https://github.com/radio-astro-tools/spectral-cube.git
+
+  - pypi_name: spherical-geometry
+    tier: affiliated
+    module: spherical_geometry
+    repo_url: https://github.com/spacetelescope/spherical_geometry.git
+
+  - pypi_name: statmorph
+    tier: affiliated
+    module: statmorph
+    repo_url: https://github.com/vrodgom/statmorph.git
+
+  - pypi_name: synphot
+    tier: affiliated
+    module: synphot
+    repo_url: https://github.com/spacetelescope/synphot_refactor.git
+
