@@ -6,7 +6,7 @@ constants and helpers, so the strings are defined in exactly one place.
 """
 
 # The three astropy variants. Listed once here so both scripts agree.
-VARIANTS = ("stable", "latest", "dev")
+VARIANTS = ("stable", "pre", "dev")
 
 # install_status values, used in results/<variant>.json
 INSTALLED = "installed"

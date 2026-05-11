@@ -21,7 +21,7 @@ astropy variant:
 | Variant  | Astropy                                             | Each package                           |
 |----------|-----------------------------------------------------|----------------------------------------|
 | `stable` | Latest non-pre-release on PyPI                      | Latest non-pre-release on PyPI         |
-| `latest` | Latest including pre-releases (`--prerelease=allow`)| Latest including pre-releases          |
+| `pre`    | Latest including pre-releases (`--prerelease=allow`)| Latest including pre-releases          |
 | `dev`    | Latest dev wheel from the astropy/simple channel    | `git+<repo_url>` (HEAD of main branch) |
 
 Within each job, a single shared venv is built and packages are

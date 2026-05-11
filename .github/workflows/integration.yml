@@ -20,7 +20,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        variant: [stable, latest, dev]
+        variant: [stable, pre, dev]
     runs-on: ubuntu-latest
     timeout-minutes: 240
     steps:

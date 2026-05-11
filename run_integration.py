@@ -9,8 +9,9 @@ Writes results/<variant>.json with the full venv freeze and per-package
 data.
 
 Usage:
+    python run_integration.py                       # all three variants
     python run_integration.py --variant stable
-    python run_integration.py --variant latest
+    python run_integration.py --variant pre
     python run_integration.py --variant dev
     python run_integration.py --variant stable --packages reproject,sunpy
     python run_integration.py --variant stable --tiers coordinated
@@ -19,7 +20,6 @@ Usage:
 import argparse
 import json
 import os
-import re
 import shutil
 import subprocess
 import sys
@@ -39,6 +39,10 @@ except ImportError:
              "Install with: pip install pyyaml packaging")
 
 import status
+
+# Make every print flush immediately so CI streams progress live
+# instead of buffering until the script exits.
+sys.stdout.reconfigure(line_buffering=True)
 
 
 PYPI_JSON_URL = "https://pypi.org/pypi/{name}/json"
@@ -91,20 +95,6 @@ def latest_pypi(name, include_prereleases):
     return sorted(versions, key=_version_key)[-1]
 
 
-def latest_astropy_nightly():
-    """Return the latest astropy version from the astropy/simple channel."""
-    html = _http_text(f"{ASTROPY_NIGHTLY_INDEX}/astropy/")
-    versions = set()
-    for href in re.findall(r'href="([^"]+\.whl)"', html):
-        fname = href.rsplit("/", 1)[-1]
-        parts = fname[: -len(".whl")].split("-")
-        if len(parts) >= 2 and parts[0].lower() == "astropy":
-            versions.add(parts[1])
-    if not versions:
-        sys.exit("No astropy nightly wheels found on the astropy/simple channel.")
-    return sorted(versions, key=_version_key)[-1]
-
-
 def _extras_suffix(pkg):
     extras = pkg.get("install_extras") or []
     return "[" + ",".join(extras) + "]" if extras else ""
@@ -113,12 +103,15 @@ def _extras_suffix(pkg):
 def resolve_specs(packages, variant):
     """Resolve the astropy spec and per-package install specs for the variant."""
     if variant == "dev":
-        astropy_ver = latest_astropy_nightly()
+        # Let uv resolve the latest dev version from the astropy/simple
+        # channel; we read the installed version back after install. No
+        # explicit pin avoids the PEP 440 local-version segment headaches
+        # that astropy's nightly wheels have (e.g. 8.1.0.dev53+gabcdef).
         astropy = {
-            "install": f"astropy=={astropy_ver}",
-            "version": astropy_ver,
+            "install": "astropy",
+            "version": "",
             "extra_index_urls": [ASTROPY_NIGHTLY_INDEX],
-            "prerelease_strategy": "if-necessary-or-explicit",
+            "prerelease_strategy": "allow",
         }
 
         def pkg_spec(pkg):
@@ -128,7 +121,7 @@ def resolve_specs(packages, variant):
             return f"{pkg['pypi_name']}{_extras_suffix(pkg)} @ git+{repo}", None
 
     else:
-        include_pre = (variant == "latest")
+        include_pre = (variant == "pre")
         astropy_ver = latest_pypi("astropy", include_prereleases=include_pre)
         astropy = {
             "install": f"astropy=={astropy_ver}",
@@ -391,7 +384,8 @@ def main():
                                  formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--config", default="packages.yaml")
     ap.add_argument("--results-dir", default="results")
-    ap.add_argument("--variant", choices=status.VARIANTS, required=True)
+    ap.add_argument("--variant", choices=status.VARIANTS,
+                    help="Variant to run; if omitted, runs all variants in sequence.")
     ap.add_argument("--packages", help="Comma-separated subset of package names to run")
     ap.add_argument("--tiers",
                     help="Comma-separated subset of tiers to run (e.g. 'coordinated,other'); "
@@ -414,9 +408,11 @@ def main():
     results_dir.mkdir(parents=True, exist_ok=True)
 
     timeouts = {"install": args.timeout_install, "test": args.timeout_test}
-    result, out_path = run_variant(args.variant, packages, repo_root, results_dir, timeouts)
-    print(f"\nDone: {_counts(result)}")
-    print(f"Wrote {out_path}")
+    variants_to_run = [args.variant] if args.variant else list(status.VARIANTS)
+    for variant in variants_to_run:
+        result, out_path = run_variant(variant, packages, repo_root, results_dir, timeouts)
+        print(f"\nDone {variant}: {_counts(result)}")
+        print(f"Wrote {out_path}")
 
 
 if __name__ == "__main__":
