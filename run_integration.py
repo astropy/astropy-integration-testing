@@ -9,10 +9,10 @@ Writes results/<variant>.json with the full venv freeze and per-package
 data.
 
 Usage:
-    python run_integration.py                       # all three variants
-    python run_integration.py --variant stable
-    python run_integration.py --variant pre
-    python run_integration.py --variant dev
+    python run_integration.py                                    # full matrix (all variants x all Python versions from config)
+    python run_integration.py --variant stable                   # one variant, all configured Pythons
+    python run_integration.py --variant stable --python 3.12     # one combo
+    python run_integration.py --python 3.14t                     # all variants on free-threaded 3.14
     python run_integration.py --variant stable --packages reproject,sunpy
     python run_integration.py --variant stable --tiers coordinated
 """
@@ -48,7 +48,6 @@ sys.stdout.reconfigure(line_buffering=True)
 PYPI_JSON_URL = "https://pypi.org/pypi/{name}/json"
 ASTROPY_NIGHTLY_INDEX = "https://pypi.anaconda.org/astropy/simple"
 LIBERFA_NIGHTLY_INDEX = "https://pypi.anaconda.org/liberfa/simple"  # for pyerfa dev wheels
-PYTHON_VERSION = "3.12"
 
 
 def _http_json(url, timeout=20):
@@ -221,6 +220,14 @@ def _load_packages(path):
     return list(raw.get("packages", []))
 
 
+def _load_python_versions(path):
+    raw = yaml.safe_load(Path(path).read_text()) or {}
+    versions = raw.get("python_versions") or []
+    if not versions:
+        versions = ["3.12"]
+    return [str(v) for v in versions]
+
+
 # Ordering of tiers when installing/displaying. Unknown tiers sort last.
 TIER_RANK = {"coordinated": 0, "affiliated": 1, "other": 2}
 
@@ -242,9 +249,9 @@ def _run_install(install_cmd, timeout):
     return proc.returncode, (proc.stderr or proc.stdout)
 
 
-def run_variant(variant, packages, repo_root, results_dir, timeouts):
+def run_variant(variant, python_version, packages, repo_root, results_dir, timeouts):
     astropy, pkg_specs = resolve_specs(packages, variant)
-    print(f"\n=== Variant: {variant} ===")
+    print(f"\n=== Variant: {variant} (Python {python_version}) ===")
     print(f"  astropy: {astropy['install']}")
     for pkg, spec, target in pkg_specs:
         print(f"  {pkg['pypi_name']:<20} {spec or '(no install spec)'}")
@@ -259,19 +266,20 @@ def run_variant(variant, packages, repo_root, results_dir, timeouts):
             "extra_index_urls": astropy["extra_index_urls"],
             "prerelease_strategy": astropy["prerelease_strategy"],
         },
+        "python_requested": python_version,
         "python_version": "",
         "fatal_error": "",
         "installed_deps": {},
         "packages": [],
     }
-    out_path = results_dir / f"{variant}.json"
+    out_path = results_dir / f"{variant}__{python_version}.json"
 
     Path(repo_root, ".tmp").mkdir(exist_ok=True)
-    tmpdir = tempfile.mkdtemp(prefix=f"int-{variant}-",
+    tmpdir = tempfile.mkdtemp(prefix=f"int-{variant}-{python_version}-",
                               dir=str(Path(repo_root, ".tmp").resolve()))
 
     try:
-        py_path = ensure_python(PYTHON_VERSION)
+        py_path = ensure_python(python_version)
         venv = os.path.join(tmpdir, "venv")
         venv_proc = subprocess.run(["uv", "venv", venv, "-p", py_path, "-q"],
                                    capture_output=True, text=True, timeout=120)
@@ -400,6 +408,9 @@ def main():
     ap.add_argument("--results-dir", default="results")
     ap.add_argument("--variant", choices=status.VARIANTS,
                     help="Variant to run; if omitted, runs all variants in sequence.")
+    ap.add_argument("--python",
+                    help="Python version to run against (e.g. '3.12', '3.14t'); "
+                         "if omitted, runs every version listed in the config.")
     ap.add_argument("--packages", help="Comma-separated subset of package names to run")
     ap.add_argument("--tiers",
                     help="Comma-separated subset of tiers to run (e.g. 'coordinated,other'); "
@@ -423,16 +434,20 @@ def main():
 
     timeouts = {"install": args.timeout_install, "test": args.timeout_test}
     variants_to_run = [args.variant] if args.variant else list(status.VARIANTS)
-    fatal_variants = []
-    for variant in variants_to_run:
-        result, out_path = run_variant(variant, packages, repo_root, results_dir, timeouts)
-        print(f"\nDone {variant}: {_counts(result)}")
-        print(f"Wrote {out_path}")
-        if result.get("fatal_error"):
-            fatal_variants.append(variant)
+    pythons_to_run = [args.python] if args.python else _load_python_versions(args.config)
 
-    if fatal_variants:
-        sys.exit(f"\nAstropy install failed for variant(s): {', '.join(fatal_variants)}")
+    fatal_combos = []
+    for python_version in pythons_to_run:
+        for variant in variants_to_run:
+            result, out_path = run_variant(variant, python_version, packages,
+                                           repo_root, results_dir, timeouts)
+            print(f"\nDone {variant}/{python_version}: {_counts(result)}")
+            print(f"Wrote {out_path}")
+            if result.get("fatal_error"):
+                fatal_combos.append(f"{variant}/{python_version}")
+
+    if fatal_combos:
+        sys.exit(f"\nAstropy install failed for: {', '.join(fatal_combos)}")
 
 
 if __name__ == "__main__":

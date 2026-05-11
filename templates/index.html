@@ -4,13 +4,13 @@
 <h1>Astropy ecosystem integration matrix</h1>
 
 <table class="meta-table">
-<thead><tr><th>Variant</th><th>Astropy</th><th>Python</th><th>Started</th><th>Finished</th></tr></thead>
+<thead><tr><th>Python</th><th>Variant</th><th>Astropy</th><th>Started</th><th>Finished</th></tr></thead>
 <tbody>
-{% for v in variants %}
+{% for v in variants_meta %}
 <tr>
-  <td><code>{{ v.name }}</code></td>
+  <td><code>{{ v.python }}</code></td>
+  <td><code>{{ v.variant }}</code></td>
   <td>{% if v.has_data %}{{ v.astropy_version }}{% if v.extra_index_urls %} <small style="color:#999">(nightly)</small>{% endif %}{% else %}-{% endif %}</td>
-  <td>{% if v.has_data %}{{ v.python_version }}{% else %}-{% endif %}</td>
   <td>{% if v.has_data %}{{ v.started_at }}{% else %}-{% endif %}</td>
   <td>{% if v.has_data %}{{ v.finished_at or "(in progress)" }}{% else %}-{% endif %}</td>
 </tr>
@@ -20,16 +20,20 @@
 
 <h2>Matrix</h2>
 <table class="matrix">
-<thead><tr>
-  <th>Package</th>
-  {% for v in variants %}<th>{{ v.name }}</th>{% endfor %}
-</tr></thead>
+<thead>
+<tr>
+  <th rowspan="2">Package</th>
+  {% for p in pythons %}<th colspan="{{ variants|length }}" class="python-group">Python {{ p }}</th>{% endfor %}
+</tr>
+<tr>
+  {% for p in pythons %}{% for v in variants %}<th>{{ v }}</th>{% endfor %}{% endfor %}
+</tr>
+</thead>
 <tbody>
 {% for row in rows %}
 <tr>
   <td><span class="pkg-name">{{ row.name }}</span></td>
-  {% for v in variants %}
-  {% set cell = row.cells[v.name] %}
+  {% for cell in row.cells %}
   <td>
     {% if cell.anchor %}
     <a class="cell-link" href="#{{ cell.anchor }}"><span class="pill {{ cell.status }}">{{ cell.label }}</span></a>
@@ -62,7 +66,7 @@
 <details id="{{ f.anchor }}">
   <summary>
     <span class="pkg-name">{{ f.name }}</span>
-    <small style="color:#6a737d">({{ f.variant }})</small>
+    <small style="color:#6a737d">({{ f.variant }} / Python {{ f.python }})</small>
     <span class="pill {{ f.status }}">{{ f.label }}</span>
   </summary>
   {% if f.install_error %}

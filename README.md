@@ -74,6 +74,24 @@ python -m http.server -d site 8000
 Results land in `results/<variant>.json`; the dashboard in `site/`.
 Both directories are gitignored.
 
+Python versions
+---------------
+
+`packages.yaml` has a top-level `python_versions` list (uv notation,
+so `"3.14t"` means the free-threaded 3.14 build):
+
+```yaml
+python_versions:
+  - "3.12"
+  - "3.14t"
+```
+
+The runner tests every (variant x python_version) combination. The
+dashboard renders Python versions as grouped header columns above the
+three variants. **Keep the `matrix.python` list in
+`.github/workflows/integration.yml` in sync** with this — the CI uses
+its own matrix because GitHub Actions can't read it from YAML directly.
+
 Adding or disabling a package
 -----------------------------
 

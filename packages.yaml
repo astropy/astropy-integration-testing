@@ -1,15 +1,23 @@
 # Packages tested by run_integration.py.
 #
 # One block per package = one row in the dashboard. For each astropy
-# variant (stable / latest / dev), the runner builds a shared venv,
-# installs astropy first then each package in turn (skipping any that
-# the resolver can't satisfy alongside the existing set), then runs
-# `pytest --pyargs <module>` for each one that installed.
+# variant (stable / pre / dev) and each Python version, the runner
+# builds a shared venv, installs astropy first then each package in
+# turn (skipping any that the resolver can't satisfy alongside the
+# existing set), then runs `pytest --pyargs <module>` for each one
+# that installed.
 #
 # `tier` is purely a category label used for ordering and the optional
 # `--tiers` CLI filter. Conventions: `coordinated` for the official
 # coordinated set, `affiliated` for affiliated packages, `other` for
 # anything else worth testing.
+#
+# `python_versions` is the list of Python versions to test against;
+# use uv's notation, so e.g. "3.14t" for the free-threaded build.
+
+python_versions:
+  - "3.12"
+  - "3.14"
 
 packages:
   - pypi_name: asdf_astropy

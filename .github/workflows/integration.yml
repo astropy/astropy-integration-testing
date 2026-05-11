@@ -20,6 +20,9 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
+        # Keep in sync with `python_versions` in packages.yaml.
+        # (free-threaded builds: use the "t" suffix, e.g. "3.14t".)
+        python: ["3.12", "3.14"]
         variant: [stable, pre, dev]
     runs-on: ubuntu-latest
     timeout-minutes: 240
@@ -37,23 +40,24 @@ jobs:
         uses: actions/cache@v4
         with:
           path: ~/.cache/uv
-          key: uv-${{ runner.os }}-${{ matrix.variant }}-${{ hashFiles('packages.yaml') }}
+          key: uv-${{ runner.os }}-${{ matrix.variant }}-${{ matrix.python }}-${{ hashFiles('packages.yaml') }}
           restore-keys: |
+            uv-${{ runner.os }}-${{ matrix.variant }}-${{ matrix.python }}-
             uv-${{ runner.os }}-${{ matrix.variant }}-
             uv-${{ runner.os }}-
 
       - name: Install runtime deps
         run: pip install packaging pyyaml
 
-      - name: Run ${{ matrix.variant }} variant
-        run: python run_integration.py --variant ${{ matrix.variant }}
+      - name: Run ${{ matrix.variant }} variant on Python ${{ matrix.python }}
+        run: python run_integration.py --variant ${{ matrix.variant }} --python ${{ matrix.python }}
 
       - name: Upload results
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: results-${{ matrix.variant }}
-          path: results/${{ matrix.variant }}.json
+          name: results-${{ matrix.variant }}-${{ matrix.python }}
+          path: results/${{ matrix.variant }}__${{ matrix.python }}.json
 
   dashboard:
     needs: variant
