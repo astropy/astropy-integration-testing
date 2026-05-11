@@ -1,15 +1,15 @@
 name: preview-link
 
-# Companion to `dashboard-preview`. When that workflow finishes (or
-# updates state), this one posts a status check on the originating
-# commit whose "Details" link goes directly to the rendered
-# dashboard.html artifact, skipping the artifact summary page.
+# Companion to `integration-matrix`. When that workflow finishes on
+# a pull request, this one attaches a status check to the source
+# commit whose "Details" link goes directly to the dashboard-preview
+# artifact (rendered HTML), skipping the artifact summary page.
 #
 # Must live on the default branch to take effect.
 
 on:
   workflow_run:
-    workflows: ["dashboard-preview"]
+    workflows: ["integration-matrix"]
     types: [requested, in_progress, completed]
 
 permissions: {}

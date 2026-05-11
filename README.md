@@ -105,20 +105,22 @@ and triggerable separately.
 PR previews
 -----------
 
-`dashboard-preview` runs on every pull request. It downloads the
-results JSONs from the most recent successful main `integration-matrix`
-run, builds a single-page `dashboard.html` with `build_dashboard.py
---single-page`, and uploads it as a non-zipped artifact
-(`actions/upload-artifact@v7` with `archive: false`). A bot comment
-on the PR links to the artifact; clicking through opens the page
+`integration-matrix` also runs on pull requests. Same three-variant
+matrix as the scheduled run, just with a different final step: the
+`dashboard` job builds a single-page summary (`build_dashboard.py
+--single-page`) and uploads it as a non-zipped artifact
+(`actions/upload-artifact@v7` with `archive: false`). The companion
+`preview-link` workflow attaches a "View dashboard preview" status
+check to the commit whose "Details" link opens the rendered page
 directly in the browser.
 
-This is fast (under a minute) because it doesn't re-run the test
-matrix; it only re-renders the dashboard with the PR's changes to
-`packages.yaml`, `build_dashboard.py`, or `templates/` applied to
-the latest real data. To actually validate a new package install,
-trigger the full `integration-matrix` workflow manually.
+This means the PR preview reflects *this PR's actual matrix run*,
+not last main's data. It's also slower than a render-only preview
+would be — expect the same wall-clock as a normal main run, up to
+a few hours per push. Concurrency cancels in-progress PR runs when
+a new push lands, so only the latest push consumes CI time.
 
-Preview is skipped for pull requests from forked repositories (the
-build still runs but the PR comment is suppressed; reviewers can
-still open the artifact link from the workflow run page).
+`preview-link.yml` lives at `.github/workflows/preview-link.yml`
+and must be on the default branch for its `workflow_run` trigger
+to fire. The first PR after merging the workflow won't get the
+status check.

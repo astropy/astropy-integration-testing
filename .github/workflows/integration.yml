@@ -4,13 +4,16 @@ on:
   schedule:
     - cron: '0 6 * * 0'   # Sundays at 06:00 UTC
   workflow_dispatch:
+  pull_request:
 
 permissions:
-  contents: write   # to push gh-pages
+  contents: write   # to push gh-pages on main / schedule / dispatch
 
 concurrency:
-  group: integration-matrix
-  cancel-in-progress: false
+  # One in-flight run per PR, one per main/dispatch invocation.
+  # PR runs cancel previous in-progress ones; main runs queue.
+  group: integration-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
   variant:
@@ -74,13 +77,29 @@ jobs:
           merge-multiple: true
           path: results/
 
-      - name: List results
-        run: ls -la results/
+      # PR path: single-page summary, uploaded as a non-zipped artifact
+      # that GitHub's artifact viewer can render directly in the browser.
+      - name: Build single-page dashboard (PR preview)
+        if: github.event_name == 'pull_request'
+        run: python build_dashboard.py --single-page
 
-      - name: Build dashboard
+      - name: Upload single-page preview
+        if: github.event_name == 'pull_request'
+        uses: actions/upload-artifact@v7
+        with:
+          name: dashboard-preview
+          path: site/dashboard.html
+          archive: false
+          overwrite: true
+
+      # Main / schedule / dispatch path: full multi-page dashboard
+      # published to gh-pages.
+      - name: Build full dashboard
+        if: github.event_name != 'pull_request'
         run: python build_dashboard.py
 
       - name: Publish to gh-pages
+        if: github.event_name != 'pull_request'
         uses: peaceiris/actions-gh-pages@v4
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
