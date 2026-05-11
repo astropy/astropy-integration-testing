@@ -61,10 +61,11 @@ jobs:
 
       - name: Run ${{ matrix.variant }} variant on Python ${{ matrix.python }}
         env:
-          # Short timeout for PR previews so the matrix finishes in
-          # minutes; full timeout for scheduled/dispatch runs.
-          TIMEOUT_FLAG: ${{ github.event_name == 'pull_request' && '--timeout-test 20' || '' }}
-        run: python run_integration.py --variant ${{ matrix.variant }} --python ${{ matrix.python }} $TIMEOUT_FLAG
+          # PR previews limit each package to the first 10 tests so the
+          # matrix finishes in minutes; conftest.py at the repo root reads
+          # this env var and truncates the collected items.
+          PYTEST_LIMIT_N: ${{ github.event_name == 'pull_request' && '10' || '' }}
+        run: python run_integration.py --variant ${{ matrix.variant }} --python ${{ matrix.python }}
 
       - name: Upload results
         if: always()

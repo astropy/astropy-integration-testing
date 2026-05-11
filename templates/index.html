@@ -3,11 +3,11 @@
 {% block body %}
 <h1>Astropy ecosystem integration matrix</h1>
 
-{% if short_timeout %}
+{% if pytest_limit %}
 <div class="banner">
-  <strong>Preview run:</strong> per-package test timeout set to <code>{{ short_timeout }}s</code>
-  for fast PR feedback. Many tests will time out; treat the matrix as a layout/workflow
-  check, not a real regression signal.
+  <strong>Preview run:</strong> each package limited to the first
+  <code>{{ pytest_limit }}</code> tests for fast PR feedback. Treat the matrix as
+  a smoke check, not a full regression signal.
 </div>
 {% endif %}
 

@@ -269,6 +269,9 @@ def run_variant(variant, python_version, packages, repo_root, results_dir, timeo
         "python_requested": python_version,
         "python_version": "",
         "timeout_test_seconds": timeouts["test"],
+        "pytest_limit_n": (int(os.environ["PYTEST_LIMIT_N"])
+                           if (os.environ.get("PYTEST_LIMIT_N") or "").isdigit()
+                           else None),
         "fatal_error": "",
         "installed_deps": {},
         "packages": [],

@@ -168,11 +168,11 @@ def build(results_dir, output_dir, templates_dir):
     variants_meta = [_variant_meta(v, p, by_combo.get((v, p)))
                      for p in pythons for v in VARIANTS]
 
-    # If any variant ran with an unusually short test timeout, surface
-    # it in a banner; that's typical for PR preview runs.
-    timeouts = {d.get("timeout_test_seconds") for d in by_combo.values()
-                if d and d.get("timeout_test_seconds")}
-    short_timeout = min((t for t in timeouts if t and t < 600), default=None)
+    # If any variant ran with a per-package test limit, surface it in
+    # a banner; PR previews use this to keep wall time bounded.
+    limits = {d.get("pytest_limit_n") for d in by_combo.values()
+              if d and d.get("pytest_limit_n")}
+    pytest_limit = min(limits) if limits else None
 
     (output_dir / "index.html").write_text(
         env.get_template("index.html").render(
@@ -181,7 +181,7 @@ def build(results_dir, output_dir, templates_dir):
             variants_meta=variants_meta,
             tier_groups=tier_groups,
             failures=failures,
-            short_timeout=short_timeout,
+            pytest_limit=pytest_limit,
         )
     )
     print(f"Wrote {output_dir}/index.html")

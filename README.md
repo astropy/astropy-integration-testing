@@ -132,10 +132,12 @@ whose "Details" link opens the rendered page directly in the
 browser.
 
 This means the PR preview reflects *this PR's actual matrix run*,
-not last main's data. It's also slower than a render-only preview
-would be — expect the same wall-clock as a normal main run, up to
-a few hours per push. Concurrency cancels in-progress PR runs when
-a new push lands, so only the latest push consumes CI time.
+not last main's data. To keep PR feedback fast, each package is
+capped at the first 10 collected tests (via `PYTEST_LIMIT_N=10`,
+applied by the repo-level `conftest.py`); the preview is a smoke
+check of layout, install resolution, and the workflow itself, not
+a full regression signal. Concurrency cancels in-progress PR runs
+when a new push lands, so only the latest push consumes CI time.
 
 `preview-link.yml` lives at `.github/workflows/preview-link.yml`
 and must be on the default branch for its `workflow_run` trigger

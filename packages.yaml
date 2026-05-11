@@ -94,8 +94,9 @@ packages:
 
   - pypi_name: APLpy
     tier: affiliated
-    module: APLpy
+    module: aplpy   # installed package name is lowercase
     repo_url: https://github.com/aplpy/aplpy.git
+    install_extras: [test]
 
   - pypi_name: astroalign
     tier: affiliated
@@ -126,10 +127,13 @@ packages:
     tier: affiliated
     module: BayesicFitting
     repo_url: https://github.com/dokester/BayesicFitting.git
+    # BayesicFitting ships unittest-style tests as Test*.py (capital T);
+    # override pytest's default `python_files` glob so it picks them up.
+    pytest_args: ["-o", "python_files=Test*.py"]
 
   - pypi_name: cluster-lensing
     tier: affiliated
-    module: cluster_lensing
+    module: clusterlensing   # installed package has no underscore
     repo_url: https://github.com/jesford/cluster-lensing.git
 
   - pypi_name: corral-pipeline
@@ -166,15 +170,21 @@ packages:
     tier: affiliated
     module: gammapy
     repo_url: https://github.com/gammapy/gammapy.git
+    install_extras: [test]
 
   - pypi_name: ginga
     tier: affiliated
     module: ginga
     repo_url: https://github.com/ejeschke/ginga.git
+    # `ginga/tests/test_zarr.py` uses removed zarr 3.x API; ignore it
+    # so the rest of the suite (256 passing tests) can run.
+    pytest_args: ["--ignore-glob=*test_zarr.py"]
 
   - pypi_name: glueviz
     tier: affiliated
-    module: glueviz
+    # glueviz is a meta-package; the actual code (and tests) lives in
+    # glue-core which it pulls in. Its installed module is `glue`.
+    module: glue
     repo_url: https://github.com/glue-viz/glue.git
 
   - pypi_name: gwcs
@@ -191,6 +201,7 @@ packages:
     tier: affiliated
     module: hendrics
     repo_url: https://github.com/StingraySoftware/HENDRICS.git
+    install_extras: [test]
 
   - pypi_name: hips
     tier: affiliated
@@ -214,23 +225,36 @@ packages:
 
   - pypi_name: ligo.skymap
     tier: affiliated
-    module: ligo_skymap
+    # PEP 420 namespace package: installed as ligo/skymap/, not ligo_skymap.
+    module: ligo.skymap
     repo_url: https://git.ligo.org/lscsoft/ligo.skymap.git
+    install_extras: [test]
 
   - pypi_name: linetools
     tier: affiliated
     module: linetools
     repo_url: https://github.com/linetools/linetools.git
+    install_extras: [test]
+    # linetools imports pkg_resources (deprecated stdlib alias); pull
+    # in setuptools so it's available at runtime.
+    extra_deps: [setuptools]
 
   - pypi_name: marxs
     tier: affiliated
     module: marxs
     repo_url: https://github.com/Chandra-MARX/marxs.git
+    install_extras: [test]
+    # Two test files require an external MARX C library we don't have;
+    # ignoring them lets the rest of the suite collect.
+    pytest_args:
+      - "--ignore-glob=*test_hrma.py"
+      - "--ignore-glob=*test_all_optics.py"
 
   - pypi_name: mocpy
     tier: affiliated
     module: mocpy
     repo_url: https://github.com/cds-astro/mocpy.git
+    install_extras: [dev]
 
   - pypi_name: naima
     tier: affiliated
@@ -256,6 +280,7 @@ packages:
     tier: affiliated
     module: pydl
     repo_url: https://github.com/weaverba137/pydl.git
+    install_extras: [test]
 
   - pypi_name: pyregion
     tier: affiliated
@@ -271,6 +296,7 @@ packages:
     tier: affiliated
     module: pyvo
     repo_url: https://github.com/astropy/pyvo.git
+    install_extras: [test]
 
   - pypi_name: regularizepsf
     tier: affiliated
@@ -291,6 +317,7 @@ packages:
     tier: affiliated
     module: spectral_cube
     repo_url: https://github.com/radio-astro-tools/spectral-cube.git
+    install_extras: [test]
 
   - pypi_name: spherical-geometry
     tier: affiliated
