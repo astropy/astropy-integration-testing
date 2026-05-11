@@ -23,6 +23,10 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
       - name: Install uv
         uses: astral-sh/setup-uv@v3
 
@@ -35,11 +39,8 @@ jobs:
             uv-${{ runner.os }}-${{ matrix.variant }}-
             uv-${{ runner.os }}-
 
-      - name: Pre-install Python 3.12
-        run: uv python install 3.12
-
       - name: Install runtime deps
-        run: uv pip install --system packaging pyyaml
+        run: pip install packaging pyyaml
 
       - name: Run ${{ matrix.variant }} variant
         run: python run_integration.py --variant ${{ matrix.variant }}
@@ -59,11 +60,12 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Install uv
-        uses: astral-sh/setup-uv@v3
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
 
       - name: Install runtime deps
-        run: uv pip install --system jinja2
+        run: pip install jinja2
 
       - name: Download all variant results
         uses: actions/download-artifact@v4

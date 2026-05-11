@@ -1,0 +1,28 @@
+name: preview-link
+
+# Companion to `dashboard-preview`. When that workflow finishes (or
+# updates state), this one posts a status check on the originating
+# commit whose "Details" link goes directly to the rendered
+# dashboard.html artifact, skipping the artifact summary page.
+#
+# Must live on the default branch to take effect.
+
+on:
+  workflow_run:
+    workflows: ["dashboard-preview"]
+    types: [requested, in_progress, completed]
+
+permissions: {}
+
+jobs:
+  redirect:
+    runs-on: ubuntu-latest
+    permissions:
+      statuses: write   # to attach a status check to the source commit
+      actions: read     # to look up the source workflow's artifact id
+    steps:
+      - uses: agriyakhetarpal/github-actions-artifacts-redirector-action@683d25ace2cb0aefe8e6719c39c2ac7f3d22dd8c
+        with:
+          repo-token: ${{ secrets.GITHUB_TOKEN }}
+          artifact-name: dashboard-preview
+          job-title: View dashboard preview

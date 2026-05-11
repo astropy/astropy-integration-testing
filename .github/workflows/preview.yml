@@ -5,8 +5,7 @@ on:
 
 permissions:
   contents: read
-  actions: read         # to find and download the latest main run's results
-  pull-requests: write  # to (re)post the preview link comment
+  actions: read   # to find and download the latest main run's results
 
 concurrency:
   group: dashboard-preview-${{ github.event.pull_request.number }}
@@ -19,11 +18,12 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Install uv
-        uses: astral-sh/setup-uv@v3
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
 
       - name: Install runtime deps
-        run: uv pip install --system jinja2
+        run: pip install jinja2
 
       - name: Find latest successful main run
         id: latest
@@ -67,49 +67,3 @@ jobs:
           # Keep one preview around per PR; the new upload supersedes the old one.
           overwrite: true
 
-      - name: Comment preview link on PR
-        if: github.event.pull_request.head.repo.full_name == github.repository
-        continue-on-error: true
-        uses: actions/github-script@v7
-        env:
-          ARTIFACT_URL: ${{ steps.upload.outputs.artifact-url }}
-          MAIN_RUN_ID: ${{ steps.latest.outputs.run_id }}
-        with:
-          script: |
-            const url = process.env.ARTIFACT_URL;
-            const mainRun = process.env.MAIN_RUN_ID;
-            const dataSource = mainRun
-              ? `Rendered against the latest successful main integration run (#${mainRun}).`
-              : `No main integration runs have completed yet, so the matrix shows no results.`;
-            const body = [
-              "**Dashboard preview**: " + url,
-              "",
-              dataSource,
-              "",
-              "<sub>Rebuilt on every push to this PR. Open the link above, then click `dashboard.html` to view in the browser.</sub>",
-            ].join("\n");
-
-            const { data: comments } = await github.rest.issues.listComments({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              issue_number: context.issue.number,
-              per_page: 100,
-            });
-            const tag = "**Dashboard preview**";
-            const existing = comments.find(c =>
-              c.user.type === "Bot" && c.body && c.body.startsWith(tag));
-            if (existing) {
-              await github.rest.issues.updateComment({
-                owner: context.repo.owner,
-                repo: context.repo.repo,
-                comment_id: existing.id,
-                body,
-              });
-            } else {
-              await github.rest.issues.createComment({
-                owner: context.repo.owner,
-                repo: context.repo.repo,
-                issue_number: context.issue.number,
-                body,
-              });
-            }
