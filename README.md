@@ -40,13 +40,14 @@ What's in the repo
 
 | File                                | Purpose                                              |
 |-------------------------------------|------------------------------------------------------|
-| `packages.yaml`                     | The list of packages tested (one block per package). |
-| `run_integration.py`                | Runs one variant: resolve specs, install, test, write `results/<variant>.json`. |
+| `packages.yaml`                     | The list of packages tested + `python_versions` to test against. |
+| `run_integration.py`                | Runs one or more (variant, python) combos: resolve specs, install, test, write `results/<variant>__<python>.json`. |
 | `build_dashboard.py`                | Reads `results/*.json`, renders `site/index.html` (single self-contained page). |
 | `status.py`                         | Shared status vocabulary (used by both scripts).     |
 | `templates/`                        | HTML/CSS for the dashboard.                          |
-| `.github/workflows/integration.yml` | The new matrix workflow (variant x3 + dashboard).    |
-| `tox.ini`, `sunpy_pytest.ini`, `.github/workflows/integration_testing.yml` | Legacy tox setup, kept for now. |
+| `.github/workflows/integration.yml` | The matrix workflow (variant x python + dashboard).  |
+| `.github/workflows/preview-link.yml`| Companion that posts the "View dashboard preview" status check on PRs. |
+| `sunpy_pytest.ini`                  | Custom pytest config referenced by sunpy's `pytest_args` (sunpy's own config requires plugins we don't install). |
 
 Running locally
 ---------------
@@ -114,11 +115,9 @@ Triggering a run from GitHub
 
 1. Actions tab -> `integration-matrix` workflow.
 2. "Run workflow" dropdown -> green button.
-3. Three variant jobs run in parallel; the `dashboard` job waits for
-   them and publishes to `gh-pages`.
-
-The legacy `astropy_rc_basic` (tox-based) workflow is still present
-and triggerable separately.
+3. The matrix expands to `len(variants) x len(python_versions)`
+   parallel jobs; the `dashboard` job waits for them and publishes
+   to `gh-pages`.
 
 PR previews
 -----------
