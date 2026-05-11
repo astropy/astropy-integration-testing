@@ -1,19 +1,103 @@
 Integration testing for the Astropy ecosystem
 =============================================
 
-[![Integration Status](https://github.com/astropy/astropy-integration-testing/workflows/astropy_rc_basic/badge.svg)](https://github.com/astropy/astropy-integration-testing/actions)
+[![Integration matrix](https://github.com/astropy/astropy-integration-testing/actions/workflows/integration.yml/badge.svg)](https://github.com/astropy/astropy-integration-testing/actions/workflows/integration.yml)
 
-This repository is a way to do integration testing
-across the Astropy ecosystem to ensure that the core and coordinated packages
-work well together.
+Cross-ecosystem integration tests for the Astropy core and coordinated
+packages. Individual packages should still test against dev/pre-release
+astropy in their own CI; the goal here is to catch issues that only
+appear when many packages are installed together.
 
-The tests here only do basic testings for those packages on Linux.
-Individual packages should still do the due diligence to test against
-dev and/or pre-release versions of `astropy` on their own to be sure.
+The dashboard is published to
+[astropy.github.io/astropy-integration-testing](https://astropy.github.io/astropy-integration-testing/)
+after each scheduled run.
 
-To run these tests on GitHub Action as a maintainer of this repo:
+How it works
+------------
 
-1. Goto Actions tab.
-2. Select `astropy_rc_basic` job.
-3. Click "Run workflow" dropdown and then the green "Run workflow" button.
-4. A new run should kick off after a few seconds. Monitor the logs of this run.
+Three CI jobs run on a schedule (and on `workflow_dispatch`), one per
+astropy variant:
+
+| Variant  | Astropy                                             | Each package                           |
+|----------|-----------------------------------------------------|----------------------------------------|
+| `stable` | Latest non-pre-release on PyPI                      | Latest non-pre-release on PyPI         |
+| `latest` | Latest including pre-releases (`--prerelease=allow`)| Latest including pre-releases          |
+| `dev`    | Latest dev wheel from the astropy/simple channel    | `git+<repo_url>` (HEAD of main branch) |
+
+Within each job, a single shared venv is built and packages are
+installed one at a time in a deterministic order (coordinated first,
+alphabetical within each tier). If a package can't be installed
+alongside the existing venv (e.g. it pins `astropy<7` but we already
+installed astropy 8), it's skipped and recorded; the rest of the venv
+is untouched. After installs, `pytest --pyargs <module>` runs for each
+package that installed successfully.
+
+A fourth job downloads the three result JSONs and publishes the
+dashboard to `gh-pages`.
+
+What's in the repo
+------------------
+
+| File                                | Purpose                                              |
+|-------------------------------------|------------------------------------------------------|
+| `packages.yaml`                     | The list of packages tested (one block per package). |
+| `run_integration.py`                | Runs one variant: resolve specs, install, test, write `results/<variant>.json`. |
+| `build_dashboard.py`                | Reads `results/*.json`, renders `site/`.             |
+| `status.py`                         | Shared status vocabulary (used by both scripts).     |
+| `templates/`                        | HTML/CSS for the dashboard.                          |
+| `.github/workflows/integration.yml` | The new matrix workflow (variant x3 + dashboard).    |
+| `tox.ini`, `sunpy_pytest.ini`, `.github/workflows/integration_testing.yml` | Legacy tox setup, kept for now. |
+
+Running locally
+---------------
+
+```bash
+pip install jinja2 packaging pyyaml
+# uv is required; see https://docs.astral.sh/uv/
+
+# Run one variant. Each variant takes 30-90 min depending on package count.
+python run_integration.py --variant stable
+
+# Or a single package, to iterate faster:
+python run_integration.py --variant stable --packages reproject
+
+# Or a tier subset (default: all tiers run):
+python run_integration.py --variant stable --tiers coordinated,other
+
+# Build the dashboard from whatever results/<variant>.json files exist:
+python build_dashboard.py
+
+# Preview locally:
+python -m http.server -d site 8000
+```
+
+Results land in `results/<variant>.json`; the dashboard in `site/`.
+Both directories are gitignored.
+
+Adding or disabling a package
+-----------------------------
+
+Edit `packages.yaml`. Each entry takes:
+
+- `pypi_name` (the package's name on PyPI; also used as the row label)
+- `tier` (label used for ordering and the `--tiers` filter; conventional
+  values are `coordinated`, `affiliated`, `other`)
+- `module` (the top-level Python module name, for `pytest --pyargs`)
+- `repo_url` (for the `dev` variant install)
+- `install_extras` (list, e.g. `[test, all]`)
+- `extra_deps` (optional list of extra packages to add to the install)
+- `pytest_args` (optional list passed through to pytest; use `-k "not foo"` to skip tests)
+
+Every entry runs by default. Use `--tiers <subset>` on the runner to
+restrict to a tier subset (e.g. `--tiers coordinated`).
+
+Triggering a run from GitHub
+----------------------------
+
+1. Actions tab -> `integration-matrix` workflow.
+2. "Run workflow" dropdown -> green button.
+3. Three variant jobs run in parallel; the `dashboard` job waits for
+   them and publishes to `gh-pages`.
+
+The legacy `astropy_rc_basic` (tox-based) workflow is still present
+and triggerable separately.

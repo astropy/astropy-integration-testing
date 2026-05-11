@@ -1,0 +1,49 @@
+{% extends "_base.html" %}
+{% block title %}Astropy integration matrix{% endblock %}
+{% block body %}
+<h1>Astropy ecosystem integration matrix</h1>
+<div class="meta"><dl>
+  {% for v in variants %}
+  <dt>{{ v.name }}</dt>
+  <dd>{% if v.has_data %}
+    astropy {{ v.astropy_version }}{% if v.extra_index_urls %} <small style="color:#999">(nightly)</small>{% endif %},
+    Python {{ v.python_version }},
+    started <code>{{ v.started_at }}</code>{% if v.finished_at %}, finished <code>{{ v.finished_at }}</code>{% endif %} &middot;
+    <a href="variants/{{ v.name }}.html">variant detail</a>
+  {% else %}<em>no results</em>{% endif %}</dd>
+  {% endfor %}
+</dl></div>
+<p>Each row is a package. Each column is an astropy variant. Click any badge for the package's test log in that variant; click "variant detail" for the variant's full <code>pip freeze</code> and per-package install outcome.</p>
+<table class="matrix">
+<thead><tr>
+  <th>Package</th>
+  {% for v in variants %}<th>{{ v.name }}</th>{% endfor %}
+</tr></thead>
+<tbody>
+{% for row in rows %}
+<tr>
+  <td><span class="pkg-name">{{ row.name }}</span></td>
+  {% for v in variants %}
+  {% set cell = row.cells[v.name] %}
+  <td>
+    {% if cell.detail_filename %}
+    <a class="cell-link" href="cells/{{ cell.detail_filename }}"><span class="pill {{ cell.status }}">{{ cell.label }}</span></a>
+    {% else %}<span class="pill {{ cell.status }}">{{ cell.label }}</span>{% endif %}
+    {% if cell.resolved_version %}<br><small style="color:#999">{{ cell.resolved_version }}</small>{% endif %}
+  </td>
+  {% endfor %}
+</tr>
+{% endfor %}
+</tbody>
+</table>
+<div class="legend">Legend:
+  <span class="pill pass">pass</span>
+  <span class="pill fail">fail</span>
+  <span class="pill timeout">timeout</span>
+  <span class="pill no-tests">no tests</span>
+  <span class="pill skipped">skipped</span>
+  <span class="pill install-fail">install fail</span>
+  <span class="pill missing">missing</span>
+</div>
+<p class="legend"><strong>skipped</strong>: resolver couldn't satisfy this package alongside the rest of the venv. <strong>install fail</strong>: install step crashed for some other reason (build error, etc.).</p>
+{% endblock %}

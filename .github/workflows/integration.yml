@@ -1,0 +1,87 @@
+name: integration-matrix
+
+on:
+  schedule:
+    - cron: '0 6 * * 0'   # Sundays at 06:00 UTC
+  workflow_dispatch:
+
+permissions:
+  contents: write   # to push gh-pages
+
+concurrency:
+  group: integration-matrix
+  cancel-in-progress: false
+
+jobs:
+  variant:
+    strategy:
+      fail-fast: false
+      matrix:
+        variant: [stable, latest, dev]
+    runs-on: ubuntu-latest
+    timeout-minutes: 240
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v3
+
+      - name: Cache ~/.cache/uv
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/uv
+          key: uv-${{ runner.os }}-${{ matrix.variant }}-${{ hashFiles('packages.yaml') }}
+          restore-keys: |
+            uv-${{ runner.os }}-${{ matrix.variant }}-
+            uv-${{ runner.os }}-
+
+      - name: Pre-install Python 3.12
+        run: uv python install 3.12
+
+      - name: Install runtime deps
+        run: uv pip install --system packaging pyyaml
+
+      - name: Run ${{ matrix.variant }} variant
+        run: python run_integration.py --variant ${{ matrix.variant }}
+
+      - name: Upload results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: results-${{ matrix.variant }}
+          path: results/${{ matrix.variant }}.json
+
+  dashboard:
+    needs: variant
+    if: always()
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v3
+
+      - name: Install runtime deps
+        run: uv pip install --system jinja2
+
+      - name: Download all variant results
+        uses: actions/download-artifact@v4
+        with:
+          pattern: results-*
+          merge-multiple: true
+          path: results/
+
+      - name: List results
+        run: ls -la results/
+
+      - name: Build dashboard
+        run: python build_dashboard.py
+
+      - name: Publish to gh-pages
+        uses: peaceiris/actions-gh-pages@v4
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./site
+          force_orphan: true
+          commit_message: Update integration dashboard

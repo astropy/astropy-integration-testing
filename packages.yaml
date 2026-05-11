@@ -1,0 +1,76 @@
+# Packages tested by run_integration.py.
+#
+# One block per package = one row in the dashboard. For each astropy
+# variant (stable / latest / dev), the runner builds a shared venv,
+# installs astropy first then each package in turn (skipping any that
+# the resolver can't satisfy alongside the existing set), then runs
+# `pytest --pyargs <module>` for each one that installed.
+#
+# `tier` is purely a category label used for ordering and the optional
+# `--tiers` CLI filter. Conventions: `coordinated` for the official
+# coordinated set, `affiliated` for affiliated packages, `other` for
+# anything else worth testing.
+
+packages:
+  - pypi_name: asdf_astropy
+    tier: coordinated
+    module: asdf_astropy
+    repo_url: https://github.com/astropy/asdf-astropy.git
+    install_extras: [test]
+
+  - pypi_name: astropy_healpix
+    tier: coordinated
+    module: astropy_healpix
+    repo_url: https://github.com/astropy/astropy-healpix.git
+    install_extras: [test]
+
+  - pypi_name: astroquery
+    tier: coordinated
+    module: astroquery
+    repo_url: https://github.com/astropy/astroquery.git
+    install_extras: [test, all]
+
+  - pypi_name: ccdproc
+    tier: coordinated
+    module: ccdproc
+    repo_url: https://github.com/astropy/ccdproc.git
+    install_extras: [test, all]
+    extra_deps: [psutil]
+
+  - pypi_name: photutils
+    tier: coordinated
+    module: photutils
+    repo_url: https://github.com/astropy/photutils.git
+    install_extras: [test, all]
+
+  - pypi_name: regions
+    tier: coordinated
+    module: regions
+    repo_url: https://github.com/astropy/regions.git
+    install_extras: [test, all]
+
+  - pypi_name: reproject
+    tier: coordinated
+    module: reproject
+    repo_url: https://github.com/astropy/reproject.git
+    install_extras: [test, all]
+    extra_deps: [gwcs]
+
+  - pypi_name: specreduce
+    tier: coordinated
+    module: specreduce
+    repo_url: https://github.com/astropy/specreduce.git
+    install_extras: [test]
+
+  - pypi_name: specutils
+    tier: coordinated
+    module: specutils
+    repo_url: https://github.com/astropy/specutils.git
+    install_extras: [all, test]
+
+  - pypi_name: sunpy
+    tier: other
+    module: sunpy
+    repo_url: https://github.com/sunpy/sunpy.git
+    install_extras: [tests, all]
+    pytest_args: ["-c", "sunpy_pytest.ini"]

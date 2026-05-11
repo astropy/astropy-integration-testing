@@ -1,0 +1,42 @@
+{% extends "_base.html" %}
+{% block title %}{{ variant }} variant{% endblock %}
+{% block nav %}<nav><a href="../index.html">&larr; Matrix</a></nav>{% endblock %}
+{% block body %}
+<h1>Variant: {{ variant }}</h1>
+<table class="meta-table">
+  <tr><td><strong>Astropy</strong></td><td>{{ data.astropy.version }} (<code>{{ data.astropy.install_spec }}</code>)</td></tr>
+  <tr><td><strong>Extra index URLs</strong></td><td>{% if data.astropy.extra_index_urls %}{% for u in data.astropy.extra_index_urls %}<code>{{ u }}</code>{% if not loop.last %}<br>{% endif %}{% endfor %}{% else %}(none){% endif %}</td></tr>
+  <tr><td><strong>Pre-release strategy</strong></td><td><code>{{ data.astropy.prerelease_strategy }}</code></td></tr>
+  <tr><td><strong>Python</strong></td><td>{{ data.python_version }}</td></tr>
+  <tr><td><strong>Started</strong></td><td>{{ data.started_at }}</td></tr>
+  <tr><td><strong>Finished</strong></td><td>{{ data.finished_at or "-" }}</td></tr>
+</table>
+
+{% if data.fatal_error %}
+<h2>Fatal error (astropy install failed; no packages were tested)</h2>
+<pre>{{ data.fatal_error }}</pre>
+{% endif %}
+
+<h2>Per-package install &amp; test outcome</h2>
+<table>
+<thead><tr><th>Package</th><th>Install</th><th>Resolved</th><th>Test</th><th>Duration</th></tr></thead>
+<tbody>
+{% for entry in data.packages %}
+{% set istat = install_badge[entry.install_status] %}
+{% set tstat = test_badge[entry.test_status] %}
+<tr>
+  <td><a href="../cells/{{ entry.name }}__{{ variant }}.html">{{ entry.name }}</a></td>
+  <td><span class="pill {{ istat.status }}">{{ istat.label }}</span></td>
+  <td>{{ entry.resolved_version or "-" }}</td>
+  <td>{% if entry.test_status %}<span class="pill {{ tstat.status }}">{{ tstat.label }}</span>{% else %}-{% endif %}</td>
+  <td>{{ entry.duration }}s</td>
+</tr>
+{% endfor %}
+</tbody>
+</table>
+
+<details><summary>Full venv freeze ({{ data.installed_deps|length }} packages)</summary>
+<table class="meta-table">
+{% for name, ver in data.installed_deps.items()|sort %}<tr><td>{{ name }}</td><td>{{ ver }}</td></tr>{% endfor %}
+</table></details>
+{% endblock %}
