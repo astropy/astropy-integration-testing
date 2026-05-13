@@ -1,7 +1,6 @@
-#!/usr/bin/env python
 """Build the single-page integration-matrix dashboard.
 
-Reads every results/<variant>__<python>.json that run_integration.py
+Reads every results/<variant>__<python>.json that `astropy-integration run`
 wrote and emits a single self-contained `site/index.html` with:
   - one row per package
   - one column group per Python version, subdivided into the three
@@ -10,15 +9,18 @@ wrote and emits a single self-contained `site/index.html` with:
     for every non-passing cell, anchored from the matching badge
 """
 
-import argparse
 import json
 import re
 import shutil
+from importlib import resources
 from pathlib import Path
 
 from jinja2 import Environment, FileSystemLoader, select_autoescape
 
-import status
+from . import status
+
+
+DEFAULT_TEMPLATES_DIR = str(resources.files(__package__) / "templates")
 
 
 VARIANTS = status.VARIANTS
@@ -187,14 +189,11 @@ def build(results_dir, output_dir, templates_dir):
     print(f"Wrote {output_dir}/index.html")
 
 
-def main():
-    ap = argparse.ArgumentParser()
+def add_arguments(ap):
     ap.add_argument("--results-dir", default="results")
     ap.add_argument("--output", default="site")
-    ap.add_argument("--templates-dir", default="templates")
-    args = ap.parse_args()
+    ap.add_argument("--templates-dir", default=DEFAULT_TEMPLATES_DIR)
+
+
+def run(args):
     build(args.results_dir, args.output, args.templates_dir)
-
-
-if __name__ == "__main__":
-    main()

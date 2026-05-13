@@ -1,4 +1,3 @@
-#!/usr/bin/env python
 """Run one variant of the astropy ecosystem integration matrix.
 
 Creates a single shared venv, installs astropy first then each package
@@ -9,12 +8,12 @@ Writes results/<variant>.json with the full venv freeze and per-package
 data.
 
 Usage:
-    python run_integration.py                                    # full matrix (all variants x all Python versions from config)
-    python run_integration.py --variant stable                   # one variant, all configured Pythons
-    python run_integration.py --variant stable --python 3.12     # one combo
-    python run_integration.py --python 3.14t                     # all variants on free-threaded 3.14
-    python run_integration.py --variant stable --packages reproject,sunpy
-    python run_integration.py --variant stable --tiers coordinated
+    astropy-integration run                                    # full matrix (all variants x all Python versions from config)
+    astropy-integration run --variant stable                   # one variant, all configured Pythons
+    astropy-integration run --variant stable --python 3.12     # one combo
+    astropy-integration run --python 3.14t                     # all variants on free-threaded 3.14
+    astropy-integration run --variant stable --packages reproject,sunpy
+    astropy-integration run --variant stable --tiers coordinated
 """
 
 import argparse
@@ -31,14 +30,10 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 
-try:
-    import yaml
-    from packaging.version import Version, InvalidVersion
-except ImportError:
-    sys.exit("This script requires 'pyyaml' and 'packaging'. "
-             "Install with: pip install pyyaml packaging")
+import yaml
+from packaging.version import Version, InvalidVersion
 
-import status
+from . import status
 
 # Make every print flush immediately so CI streams progress live
 # instead of buffering until the script exits.
@@ -411,9 +406,7 @@ def _counts(result):
     return {"install": dict(install), "test": dict(test)}
 
 
-def main():
-    ap = argparse.ArgumentParser(description=__doc__,
-                                 formatter_class=argparse.RawDescriptionHelpFormatter)
+def add_arguments(ap):
     ap.add_argument("--config", default="packages.yaml")
     ap.add_argument("--results-dir", default="results")
     ap.add_argument("--variant", choices=status.VARIANTS,
@@ -427,8 +420,9 @@ def main():
                          "default: all tiers")
     ap.add_argument("--timeout-install", type=int, default=900)
     ap.add_argument("--timeout-test", type=int, default=1800)
-    args = ap.parse_args()
 
+
+def run(args):
     packages = _load_packages(args.config)
     if args.tiers:
         wanted_tiers = {t.strip() for t in args.tiers.split(",") if t.strip()}
@@ -458,7 +452,3 @@ def main():
 
     if fatal_combos:
         sys.exit(f"\nAstropy install failed for: {', '.join(fatal_combos)}")
-
-
-if __name__ == "__main__":
-    main()

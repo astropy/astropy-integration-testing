@@ -56,8 +56,8 @@ jobs:
             uv-${{ runner.os }}-${{ matrix.variant }}-
             uv-${{ runner.os }}-
 
-      - name: Install runtime deps
-        run: pip install packaging pyyaml
+      - name: Install astropy-integration
+        run: pip install -e .
 
       - name: Run ${{ matrix.variant }} variant on Python ${{ matrix.python }}
         env:
@@ -65,7 +65,7 @@ jobs:
           # matrix finishes in minutes; conftest.py at the repo root reads
           # this env var and truncates the collected items.
           PYTEST_LIMIT_N: ${{ github.event_name == 'pull_request' && '10' || '' }}
-        run: python run_integration.py --variant ${{ matrix.variant }} --python ${{ matrix.python }}
+        run: astropy-integration run --variant ${{ matrix.variant }} --python ${{ matrix.python }}
 
       - name: Upload results
         if: always()
@@ -86,8 +86,8 @@ jobs:
         with:
           python-version: '3.12'
 
-      - name: Install runtime deps
-        run: pip install jinja2
+      - name: Install astropy-integration
+        run: pip install -e .
 
       - name: Download all variant results
         uses: actions/download-artifact@v4
@@ -97,7 +97,7 @@ jobs:
           path: results/
 
       - name: Build dashboard
-        run: python build_dashboard.py
+        run: astropy-integration dashboard
 
       # PR path: upload index.html as a non-zipped artifact for the
       # in-browser preview (linked from a PR check by preview-link.yml).
