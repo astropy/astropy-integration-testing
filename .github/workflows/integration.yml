@@ -58,7 +58,7 @@ jobs:
             uv-${{ runner.os }}-
 
       - name: Install astropy-integration
-        run: pip install -e .
+        run: pip install .
 
       - name: Run ${{ matrix.variant }} variant on Python ${{ matrix.python }}
         env:
@@ -94,7 +94,7 @@ jobs:
           python-version: '3.12'
 
       - name: Install astropy-integration
-        run: pip install -e .
+        run: pip install .
 
       - name: Download all variant results
         uses: actions/download-artifact@v4

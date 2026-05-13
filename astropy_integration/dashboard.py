@@ -12,18 +12,12 @@ wrote and emits a single self-contained `site/index.html` with:
 import json
 import re
 import shutil
-from importlib import resources
+from itertools import groupby
 from pathlib import Path
 
-from jinja2 import Environment, FileSystemLoader, select_autoescape
+from jinja2 import Environment, FileSystemLoader, PackageLoader, select_autoescape
 
 from . import status
-
-
-DEFAULT_TEMPLATES_DIR = str(resources.files(__package__) / "templates")
-
-
-VARIANTS = status.VARIANTS
 
 
 def _anchor_id(name, variant, python):
@@ -57,7 +51,7 @@ def _column_groups(by_combo):
       columns: flat list of (python, variant) tuples in display order.
     """
     pythons = sorted({p for _, p in by_combo}, key=lambda s: (len(s), s))
-    columns = [(p, v) for p in pythons for v in VARIANTS]
+    columns = [(p, v) for p in pythons for v in status.VARIANTS]
     return pythons, columns
 
 
@@ -99,30 +93,39 @@ def _make_rows(by_combo, names, columns):
             if data:
                 entry = next((e for e in data["packages"] if e["name"] == name), None)
             if entry is None:
-                cells.append({
-                    "status": "missing", "label": "-",
-                    "anchor": "", "resolved_version": "",
-                })
+                cells.append(
+                    {
+                        "status": "missing",
+                        "label": "-",
+                        "anchor": "",
+                        "resolved_version": "",
+                    }
+                )
                 continue
             if row_tier is None:
                 row_tier = entry.get("tier", "coordinated")
             badge = status.cell_badge(entry)
-            anchor = (_anchor_id(name, variant, python)
-                      if badge["status"] not in ("pass", "missing") else "")
-            cells.append({
-                **badge,
-                "anchor": anchor,
-                "resolved_version": entry.get("resolved_version", ""),
-            })
+            anchor = (
+                _anchor_id(name, variant, python)
+                if badge["status"] not in ("pass", "missing")
+                else ""
+            )
+            cells.append(
+                {
+                    **badge,
+                    "anchor": anchor,
+                    "resolved_version": entry.get("resolved_version", ""),
+                }
+            )
         rows.append({"name": name, "tier": row_tier or "coordinated", "cells": cells})
     return rows
 
 
 def _group_rows_by_tier(rows):
     """Group rows by tier, preserving order. Returns [(tier, [rows]), ...]."""
-    from itertools import groupby
-    return [(tier, list(group))
-            for tier, group in groupby(rows, key=lambda r: r["tier"])]
+    return [
+        (tier, list(group)) for tier, group in groupby(rows, key=lambda r: r["tier"])
+    ]
 
 
 def _failures(by_combo, columns):
@@ -136,30 +139,34 @@ def _failures(by_combo, columns):
             badge = status.cell_badge(entry)
             if badge["status"] in ("pass", "missing"):
                 continue
-            out.append({
-                "name": entry["name"],
-                "variant": variant,
-                "python": python,
-                "status": badge["status"],
-                "label": badge["label"],
-                "install_error": entry.get("install_error", ""),
-                "test_output": entry.get("test_output", ""),
-                "anchor": _anchor_id(entry["name"], variant, python),
-            })
+            out.append(
+                {
+                    "name": entry["name"],
+                    "variant": variant,
+                    "python": python,
+                    "status": badge["status"],
+                    "label": badge["label"],
+                    "install_error": entry.get("install_error", ""),
+                    "test_output": entry.get("test_output", ""),
+                    "anchor": _anchor_id(entry["name"], variant, python),
+                }
+            )
     return out
 
 
-def build(results_dir, output_dir, templates_dir):
+def build(results_dir, output_dir, templates_dir=None):
     results_dir = Path(results_dir)
     output_dir = Path(output_dir)
     if output_dir.exists():
         shutil.rmtree(output_dir)
     output_dir.mkdir(parents=True)
 
-    env = Environment(
-        loader=FileSystemLoader(str(templates_dir)),
-        autoescape=select_autoescape(["html"]),
+    loader = (
+        FileSystemLoader(str(templates_dir))
+        if templates_dir
+        else PackageLoader("astropy_integration", "templates")
     )
+    env = Environment(loader=loader, autoescape=select_autoescape(["html"]))
 
     by_combo = _load_results(results_dir)
     pythons, columns = _column_groups(by_combo)
@@ -167,19 +174,25 @@ def build(results_dir, output_dir, templates_dir):
     rows = _make_rows(by_combo, names, columns)
     tier_groups = _group_rows_by_tier(rows)
     failures = _failures(by_combo, columns)
-    variants_meta = [_variant_meta(v, p, by_combo.get((v, p)))
-                     for p in pythons for v in VARIANTS]
+    variants_meta = [
+        _variant_meta(v, p, by_combo.get((v, p)))
+        for p in pythons
+        for v in status.VARIANTS
+    ]
 
     # If any variant ran with a per-package test limit, surface it in
     # a banner; PR previews use this to keep wall time bounded.
-    limits = {d.get("pytest_limit_n") for d in by_combo.values()
-              if d and d.get("pytest_limit_n")}
+    limits = {
+        d.get("pytest_limit_n")
+        for d in by_combo.values()
+        if d and d.get("pytest_limit_n")
+    }
     pytest_limit = min(limits) if limits else None
 
     (output_dir / "index.html").write_text(
         env.get_template("index.html").render(
             pythons=pythons,
-            variants=list(VARIANTS),
+            variants=list(status.VARIANTS),
             variants_meta=variants_meta,
             tier_groups=tier_groups,
             failures=failures,
@@ -192,7 +205,11 @@ def build(results_dir, output_dir, templates_dir):
 def add_arguments(ap):
     ap.add_argument("--results-dir", default="results")
     ap.add_argument("--output", default="site")
-    ap.add_argument("--templates-dir", default=DEFAULT_TEMPLATES_DIR)
+    ap.add_argument(
+        "--templates-dir",
+        default=None,
+        help="Override templates directory (default: package's bundled templates).",
+    )
 
 
 def run(args):

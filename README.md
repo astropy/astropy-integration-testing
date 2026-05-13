@@ -38,42 +38,45 @@ dashboard to `gh-pages`.
 What's in the repo
 ------------------
 
-| File                                | Purpose                                              |
-|-------------------------------------|------------------------------------------------------|
-| `packages.yaml`                     | The list of packages tested + `python_versions` to test against. |
-| `run_integration.py`                | Runs one or more (variant, python) combos: resolve specs, install, test, write `results/<variant>__<python>.json`. |
-| `build_dashboard.py`                | Reads `results/*.json`, renders `site/index.html` (single self-contained page). |
-| `status.py`                         | Shared status vocabulary (used by both scripts).     |
-| `templates/`                        | HTML/CSS for the dashboard.                          |
-| `.github/workflows/integration.yml` | The matrix workflow (variant x python + dashboard).  |
-| `.github/workflows/preview-link.yml`| Companion that posts the "View dashboard preview" status check on PRs. |
-| `sunpy_pytest.ini`                  | Custom pytest config referenced by sunpy's `pytest_args` (sunpy's own config requires plugins we don't install). |
+| File                                  | Purpose                                              |
+|---------------------------------------|------------------------------------------------------|
+| `packages.yaml`                       | The list of packages tested + `python_versions` to test against. |
+| `astropy_integration/run.py`          | Runs one or more (variant, python) combos: resolve specs, install, test, write `results/<variant>__<python>.json`. |
+| `astropy_integration/dashboard.py`    | Reads `results/*.json`, renders `site/index.html` (single self-contained page). |
+| `astropy_integration/cli.py`          | Console entry point that dispatches the `run` and `dashboard` subcommands. |
+| `astropy_integration/status.py`       | Shared status vocabulary (used by both `run` and `dashboard`). |
+| `astropy_integration/templates/`      | HTML/CSS for the dashboard (loaded as package data). |
+| `pyproject.toml`                      | Package metadata; declares the `astropy-integration` console script. |
+| `conftest.py`                         | Repo-root pytest plugin that caps each package to the first `PYTEST_LIMIT_N` tests for PR previews. |
+| `.github/workflows/integration.yml`   | The matrix workflow (variant x python + dashboard).  |
+| `.github/workflows/preview-link.yml`  | Companion that posts the "View dashboard preview" status check on PRs. |
+| `sunpy_pytest.ini`                    | Custom pytest config referenced by sunpy's `pytest_args` (sunpy's own config requires plugins we don't install). |
 
 Running locally
 ---------------
 
 ```bash
-pip install jinja2 packaging pyyaml
+pip install .
 # uv is required; see https://docs.astral.sh/uv/
 
 # Run one variant. Each variant takes 30-90 min depending on package count.
-python run_integration.py --variant stable
+astropy-integration run --variant stable
 
 # Or a single package, to iterate faster:
-python run_integration.py --variant stable --packages reproject
+astropy-integration run --variant stable --packages reproject
 
 # Or a tier subset (default: all tiers run):
-python run_integration.py --variant stable --tiers coordinated,other
+astropy-integration run --variant stable --tiers coordinated,other
 
-# Build the dashboard from whatever results/<variant>.json files exist:
-python build_dashboard.py
+# Build the dashboard from whatever results/*.json files exist:
+astropy-integration dashboard
 
 # Preview locally:
 python -m http.server -d site 8000
 ```
 
-Results land in `results/<variant>.json`; the dashboard in `site/`.
-Both directories are gitignored.
+Results land in `results/<variant>__<python>.json`; the dashboard in
+`site/`. Both directories are gitignored.
 
 Python versions
 ---------------

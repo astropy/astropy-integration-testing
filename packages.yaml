@@ -1,4 +1,4 @@
-# Packages tested by run_integration.py.
+# Packages tested by `astropy-integration run`.
 #
 # One block per package = one row in the dashboard. For each astropy
 # variant (stable / pre / dev) and each Python version, the runner
@@ -333,4 +333,3 @@ packages:
     tier: affiliated
     module: synphot
     repo_url: https://github.com/spacetelescope/synphot_refactor.git
-
