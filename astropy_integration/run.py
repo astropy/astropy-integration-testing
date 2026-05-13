@@ -352,7 +352,6 @@ def run_variant(variant, python_version, packages, repo_root, results_dir, timeo
                 "install_status": "",  # installed | skipped | install-fail | no-spec
                 "install_error": "",
                 "test_status": "",  # pass | fail | no-tests | timeout | not-run
-                "tests_passed": None,
                 "test_output": "",
                 "duration": 0,
             }
@@ -422,10 +421,8 @@ def run_variant(variant, python_version, packages, repo_root, results_dir, timeo
                 entry["test_status"] = status.NO_TESTS
             elif proc.returncode == 0:
                 entry["test_status"] = status.PASS
-                entry["tests_passed"] = True
             else:
                 entry["test_status"] = status.FAIL
-                entry["tests_passed"] = False
             print(f"  {entry['test_status']} in {entry['duration']}s")
 
     finally:

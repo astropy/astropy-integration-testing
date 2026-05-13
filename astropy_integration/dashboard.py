@@ -15,7 +15,7 @@ import shutil
 from itertools import groupby
 from pathlib import Path
 
-from jinja2 import Environment, FileSystemLoader, PackageLoader, select_autoescape
+from jinja2 import Environment, PackageLoader, select_autoescape
 
 from . import status
 
@@ -154,19 +154,17 @@ def _failures(by_combo, columns):
     return out
 
 
-def build(results_dir, output_dir, templates_dir=None):
+def build(results_dir, output_dir):
     results_dir = Path(results_dir)
     output_dir = Path(output_dir)
     if output_dir.exists():
         shutil.rmtree(output_dir)
     output_dir.mkdir(parents=True)
 
-    loader = (
-        FileSystemLoader(str(templates_dir))
-        if templates_dir
-        else PackageLoader("astropy_integration", "templates")
+    env = Environment(
+        loader=PackageLoader("astropy_integration", "templates"),
+        autoescape=select_autoescape(["html"]),
     )
-    env = Environment(loader=loader, autoescape=select_autoescape(["html"]))
 
     by_combo = _load_results(results_dir)
     pythons, columns = _column_groups(by_combo)
@@ -205,12 +203,7 @@ def build(results_dir, output_dir, templates_dir=None):
 def add_arguments(ap):
     ap.add_argument("--results-dir", default="results")
     ap.add_argument("--output", default="site")
-    ap.add_argument(
-        "--templates-dir",
-        default=None,
-        help="Override templates directory (default: package's bundled templates).",
-    )
 
 
 def run(args):
-    build(args.results_dir, args.output, args.templates_dir)
+    build(args.results_dir, args.output)
