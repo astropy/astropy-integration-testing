@@ -35,22 +35,23 @@ jobs:
 
       - name: Install uv
         uses: astral-sh/setup-uv@v3
-
-      - name: Compute cache key suffix (ISO week)
-        id: cache_key
-        run: echo "week=$(date -u +%G-%V)" >> "$GITHUB_OUTPUT"
+        with:
+          # We manage the cache ourselves via actions/cache below; turning
+          # off setup-uv's own caching avoids it saving a duplicate of the
+          # same directory under its own key.
+          enable-cache: false
 
       - name: Cache ~/.cache/uv
         uses: actions/cache@v4
         with:
           path: ~/.cache/uv
-          # Wheels for a given version are immutable on PyPI, so we
-          # rotate the primary key weekly: same-week runs hit the
-          # primary key (no re-save), the first run each week restores
-          # from last week's cache via restore-keys and saves a fresh
-          # one. Keeps cache storage bounded while still picking up
-          # newly-released wheels eventually.
-          key: uv-${{ runner.os }}-${{ matrix.variant }}-${{ matrix.python }}-${{ steps.cache_key.outputs.week }}
+          # Primary key uses the run id, so every run writes a fresh
+          # snapshot (after `uv cache prune --ci` slims it to wheels
+          # actually used in this run). The restore-keys are prefix
+          # matches against saved keys, so the first one always finds
+          # the most recent run's cache for the same (os, variant,
+          # python) and the next run starts warm.
+          key: uv-${{ runner.os }}-${{ matrix.variant }}-${{ matrix.python }}-${{ github.run_id }}
           restore-keys: |
             uv-${{ runner.os }}-${{ matrix.variant }}-${{ matrix.python }}-
             uv-${{ runner.os }}-${{ matrix.variant }}-
@@ -66,6 +67,12 @@ jobs:
           # this env var and truncates the collected items.
           PYTEST_LIMIT_N: ${{ github.event_name == 'pull_request' && '10' || '' }}
         run: astropy-integration run --variant ${{ matrix.variant }} --python ${{ matrix.python }}
+
+      - name: Prune uv cache before save
+        if: always()
+        # Strips pre-built sdists and other entries uv won't reuse, so
+        # the snapshot the cache step uploads stays lean.
+        run: uv cache prune --ci
 
       - name: Upload results
         if: always()
