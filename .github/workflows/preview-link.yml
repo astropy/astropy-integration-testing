@@ -21,7 +21,7 @@ jobs:
       statuses: write   # to attach a status check to the source commit
       actions: read     # to look up the source workflow's artifact id
     steps:
-      - uses: agriyakhetarpal/github-actions-artifacts-redirector-action@683d25ace2cb0aefe8e6719c39c2ac7f3d22dd8c
+      - uses: agriyakhetarpal/github-actions-artifacts-redirector-action@683d25ace2cb0aefe8e6719c39c2ac7f3d22dd8c  # v1.0.0
         with:
           repo-token: ${{ secrets.GITHUB_TOKEN }}
           # With `archive: false`, artifact-name is the uploaded file's

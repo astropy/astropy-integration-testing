@@ -28,17 +28,17 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 240
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5  # v4.3.1
 
       # This Python only runs the `astropy-integration` orchestrator CLI;
       # the test venv for `matrix.python` is built separately by uv (see
       # the `run` step below), so a fixed version is fine here.
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065  # v5.6.0
         with:
           python-version: '3.12'
 
       - name: Install uv
-        uses: astral-sh/setup-uv@v3
+        uses: astral-sh/setup-uv@caf0cab7a618c569241d31dcd442f54681755d39  # v3.2.4
         with:
           # We manage the cache ourselves via actions/cache below; turning
           # off setup-uv's own caching avoids it saving a duplicate of the
@@ -46,7 +46,7 @@ jobs:
           enable-cache: false
 
       - name: Cache ~/.cache/uv
-        uses: actions/cache@v4
+        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830  # v4.3.0
         with:
           path: ~/.cache/uv
           # Primary key uses the run id, so every run writes a fresh
@@ -80,7 +80,7 @@ jobs:
 
       - name: Upload results
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02  # v4.6.2
         with:
           name: results-${{ matrix.variant }}-${{ matrix.python }}
           path: results/${{ matrix.variant }}__${{ matrix.python }}.json
@@ -91,9 +91,9 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5  # v4.3.1
 
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065  # v5.6.0
         with:
           python-version: '3.12'
 
@@ -101,7 +101,7 @@ jobs:
         run: pip install .
 
       - name: Download all variant results
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093  # v4.3.0
         with:
           pattern: results-*
           merge-multiple: true
@@ -114,7 +114,7 @@ jobs:
       # in-browser preview (linked from a PR check by preview-link.yml).
       - name: Upload preview artifact
         if: github.event_name == 'pull_request'
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a  # v7.0.1
         with:
           name: dashboard-preview
           path: site/index.html
@@ -124,7 +124,7 @@ jobs:
       # Main / schedule / dispatch path: publish to gh-pages.
       - name: Publish to gh-pages
         if: github.event_name != 'pull_request'
-        uses: peaceiris/actions-gh-pages@v4
+        uses: peaceiris/actions-gh-pages@4f9cc6602d3f66b9c108549d475ec49e8ef4d45e  # v4.0.0
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           publish_dir: ./site

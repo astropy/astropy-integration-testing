@@ -9,6 +9,9 @@ updates:
     directory: ".github/workflows" # Location of package manifests
     schedule:
       interval: "weekly"
+    cooldown:
+      # Let a release settle before Dependabot proposes bumping to it.
+      default-days: 7
     groups:
       actions:
         patterns:
