@@ -2,6 +2,7 @@
 
 Reads every results/<variant>__<python>.json that `astropy-integration run`
 wrote and emits a single self-contained `site/index.html` with:
+
   - one row per package
   - one column group per Python version, subdivided into the three
     astropy variants (stable / pre / dev)

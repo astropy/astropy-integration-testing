@@ -27,7 +27,7 @@ astropy variant:
 Within each job, a single shared venv is built and packages are
 installed one at a time in a deterministic order (coordinated first,
 alphabetical within each tier). If a package can't be installed
-alongside the existing venv (e.g. it pins `astropy<7` but we already
+alongside the existing venv (e.g., it pins `astropy<7` but we already
 installed astropy 8), it's skipped and recorded; the rest of the venv
 is untouched. After installs, `pytest --pyargs <module>` runs for each
 package that installed successfully.
