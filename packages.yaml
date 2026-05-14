@@ -38,6 +38,11 @@ packages:
     module: astroquery
     repo_url: https://github.com/astropy/astroquery.git
     install_extras: [test, all]
+    # test_raises_deprecation_warning uses pytest.raises() on a warning,
+    # which only works under astroquery's own filterwarnings=error config;
+    # that setup.cfg config is not picked up when running --pyargs from
+    # the harness rootdir, so the test cannot pass here.
+    pytest_args: ["-k", "not test_raises_deprecation_warning"]
 
   - pypi_name: ccdproc
     tier: coordinated
@@ -104,10 +109,11 @@ packages:
     module: astroalign
     repo_url: https://github.com/quatrope/astroalign.git
 
-  - pypi_name: astroML
-    tier: affiliated
-    module: astroML
-    repo_url: https://github.com/astroML/astroML.git
+  # astroML is no longer maintained, so it is excluded from the matrix.
+  # - pypi_name: astroML
+  #   tier: affiliated
+  #   module: astroML
+  #   repo_url: https://github.com/astroML/astroML.git
 
   - pypi_name: astroplan
     tier: affiliated

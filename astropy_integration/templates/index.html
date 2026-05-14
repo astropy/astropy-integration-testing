@@ -96,6 +96,23 @@
 <p class="legend">No failures &mdash; every package passed in every variant that ran.</p>
 {% endif %}
 
+{% if variants_meta|selectattr("installed_deps")|list %}
+<h2>Installed packages</h2>
+<p class="legend">Full <code>uv pip freeze</code> of the shared venv for each variant that ran.</p>
+{% for v in variants_meta %}
+{% if v.installed_deps %}
+<details>
+  <summary>
+    <code>{{ v.variant }}</code> / Python <code>{{ v.python }}</code>
+    <small style="color:#6a737d">({{ v.installed_deps|length }} packages)</small>
+  </summary>
+  <pre>{% for name, ver in v.installed_deps|dictsort %}{{ name }}=={{ ver }}
+{% endfor %}</pre>
+</details>
+{% endif %}
+{% endfor %}
+{% endif %}
+
 <script>
 function openTarget() {
   const id = location.hash.slice(1);
