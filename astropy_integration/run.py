@@ -2,7 +2,9 @@
 
 Creates a single shared venv, installs astropy first then each package
 from packages.yaml in order, recording per-package install outcome
-(installed / skipped / install-fail / no-spec). Then runs
+(installed / skipped / install-fail / no-spec). Each install is
+constrained so it can never downgrade a package already in the venv;
+a package needing an older version is reported as skipped. Then runs
 `pytest --pyargs <module>` for each successfully-installed package.
 Writes results/<variant>__<python>.json with the full venv freeze and
 per-package data.
@@ -223,6 +225,20 @@ def _freeze(python):
     return out
 
 
+def _write_no_downgrade_constraints(python, path):
+    """Pin every installed package to '>=' its current version.
+
+    Passed as a uv `--constraint` file to later installs so a new package
+    can pull its deps forward but never downgrade what the shared venv
+    already has; a package that genuinely needs an older version then
+    shows up as a resolver conflict (skipped) instead of silently
+    poisoning the venv for everything tested afterwards.
+    """
+    frozen = _freeze(python)
+    lines = [f"{name}>={ver}" for name, ver in sorted(frozen.items())]
+    Path(path).write_text("\n".join(lines) + ("\n" if lines else ""))
+
+
 def _load_packages(path):
     raw = yaml.safe_load(Path(path).read_text()) or {}
     return list(raw.get("packages", []))
@@ -313,6 +329,7 @@ def run_variant(variant, python_version, packages, repo_root, results_dir, timeo
             return result, out_path
         python = os.path.join(venv, "bin", "python")
         result["python_version"] = _venv_python_version(python)
+        constraints_path = os.path.join(tmpdir, "no-downgrade-constraints.txt")
 
         common = ["uv", "pip", "install", "--python", python, "-q"]
         for url in astropy["extra_index_urls"]:
@@ -339,6 +356,7 @@ def run_variant(variant, python_version, packages, repo_root, results_dir, timeo
         result["astropy"]["version"] = (
             _pkg_version(python, "astropy") or result["astropy"]["version"]
         )
+        _write_no_downgrade_constraints(python, constraints_path)
 
         installed_pkgs = []
         for pkg, install_spec, target_version in pkg_specs:
@@ -364,13 +382,18 @@ def run_variant(variant, python_version, packages, repo_root, results_dir, timeo
                 continue
 
             print(f"\nInstalling {pkg['pypi_name']}...")
-            install_cmd = common + [install_spec] + (pkg.get("extra_deps") or [])
+            install_cmd = (
+                common
+                + ["--constraint", constraints_path, install_spec]
+                + (pkg.get("extra_deps") or [])
+            )
             rc, err = _run_install(install_cmd, timeouts["install"])
             if rc == 0:
                 entry["install_status"] = status.INSTALLED
                 entry["resolved_version"] = _pkg_version(python, pkg["pypi_name"])
                 print(f"  installed at {entry['resolved_version']}")
                 installed_pkgs.append((pkg, entry))
+                _write_no_downgrade_constraints(python, constraints_path)
             else:
                 entry["install_error"] = err
                 if _resolver_conflict(err):
@@ -467,12 +490,20 @@ def run(args):
     # instead of buffering until the script exits.
     sys.stdout.reconfigure(line_buffering=True)
 
-    packages = _load_packages(args.config)
+    all_packages = _load_packages(args.config)
+    packages = all_packages
     if args.tiers:
         wanted_tiers = {t.strip() for t in args.tiers.split(",") if t.strip()}
         packages = [p for p in packages if p.get("tier", "coordinated") in wanted_tiers]
     if args.packages:
         wanted = {n.strip() for n in args.packages.split(",") if n.strip()}
+        known = {p["pypi_name"] for p in all_packages}
+        unknown = wanted - known
+        if unknown:
+            sys.exit(
+                f"Unknown package name(s): {', '.join(sorted(unknown))}. "
+                f"Valid names are the pypi_name entries in {args.config}."
+            )
         packages = [p for p in packages if p["pypi_name"] in wanted]
     packages = _install_order(packages)
 

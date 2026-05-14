@@ -68,6 +68,7 @@ def _variant_meta(variant, python, data):
         "python_version": data.get("python_version") or python,
         "started_at": data["started_at"],
         "finished_at": data["finished_at"],
+        "installed_deps": data.get("installed_deps") or {},
     }
 
 
