@@ -69,6 +69,12 @@ packages:
     repo_url: https://github.com/astropy/reproject.git
     install_extras: [test, all]
     extra_deps: [gwcs]
+    # test_reproject_parallel_broadcasting asserts on INFO-level log
+    # records via caplog; capturing those needs log_level=INFO, which
+    # reproject sets in its own pyproject.toml. That config is not
+    # picked up when running --pyargs from the harness rootdir, so set
+    # it explicitly here.
+    pytest_args: ["-o", "log_level=INFO"]
 
   - pypi_name: specreduce
     tier: coordinated
