@@ -1,19 +1,23 @@
-"""Run one variant of the astropy ecosystem integration matrix.
+"""Run one or more columns of the ecosystem integration matrix.
 
-Creates a single shared venv, installs astropy first then each package
-from packages.yaml in order, recording per-package install outcome
-(installed / skipped / install-fail / no-spec). Each install is
-constrained so it can never downgrade a package already in the venv;
-a package needing an older version is reported as skipped. Then runs
-`pytest --pyargs <module>` for each successfully-installed package.
-Writes results/<variant>__<python>.json with the full venv freeze and
-per-package data.
+Creates a single shared venv, installs the core package first then
+each package from packages.yaml in order, recording per-package
+install outcome (installed / skipped / install-fail / no-spec). Each
+install is constrained so it can never downgrade a package already in
+the venv; a package needing an older version is reported as skipped.
+Then runs `pytest --pyargs <module>` for each successfully-installed
+package. Writes results/<variant>__<python>.json with the full venv
+freeze and per-package data.
+
+A "column" is one (python, variant) pair from the config; the two
+axes are independent (see `columns:` in packages.yaml). `--variant`
+and `--python` narrow the configured columns down to a subset.
 
 Usage:
-    astropy-integration run                                    # full matrix (all variants x all Python versions from config)
-    astropy-integration run --variant stable                   # one variant, all configured Pythons
-    astropy-integration run --variant stable --python 3.12     # one combo
-    astropy-integration run --python 3.14t                     # all variants on free-threaded 3.14
+    astropy-integration run                                    # every configured column
+    astropy-integration run --variant stable                   # configured columns with variant=stable
+    astropy-integration run --variant stable --python 3.12     # one specific column
+    astropy-integration run --python 3.14t                     # configured columns with python=3.14t
     astropy-integration run --variant stable --packages reproject,sunpy
     astropy-integration run --variant stable --tiers coordinated
 """
@@ -30,16 +34,11 @@ from collections import Counter
 from datetime import datetime, timezone
 from pathlib import Path
 
-import yaml
 from packaging.version import InvalidVersion, Version
 
-from . import status
+from . import config, status
 
 PYPI_JSON_URL = "https://pypi.org/pypi/{name}/json"
-ASTROPY_NIGHTLY_INDEX = "https://pypi.anaconda.org/astropy/simple"
-LIBERFA_NIGHTLY_INDEX = (
-    "https://pypi.anaconda.org/liberfa/simple"  # for pyerfa dev wheels
-)
 
 
 def _http_json(url, timeout=20):
@@ -87,27 +86,41 @@ def _extras_suffix(pkg):
     return "[" + ",".join(extras) + "]" if extras else ""
 
 
-def resolve_specs(packages, variant):
-    """Resolve the astropy spec and per-package install specs for the variant."""
+def resolve_specs(packages, variant, core):
+    """Resolve the core-package spec and per-package install specs for the variant."""
+    core_name = core["pypi_name"]
     if variant == "dev":
-        # Let uv resolve the latest dev version from the astropy/simple
-        # channel; we read the installed version back after install. No
-        # explicit pin avoids the PEP 440 local-version segment headaches
-        # that astropy's nightly wheels have (e.g. 8.1.0.dev53+gabcdef).
-        #
-        # `--index-strategy unsafe-best-match` is required because uv's
-        # default ("first-index") only considers a single index per
-        # package; astropy/simple hosts astropy AND pyerfa (the channel's
-        # latest wheels sometimes ship only musllinux). unsafe-best-match
-        # lets uv fall back to PyPI when the channel's only wheels don't
-        # match the runner platform.
-        astropy = {
-            "install": "astropy",
-            "version": "",
-            "extra_index_urls": [ASTROPY_NIGHTLY_INDEX, LIBERFA_NIGHTLY_INDEX],
-            "prerelease_strategy": "allow",
-            "index_strategy": "unsafe-best-match",
-        }
+        dev_index_urls = core.get("dev_index_urls") or []
+        if dev_index_urls:
+            # Let uv resolve the latest dev version from the core
+            # package's nightly channel; we read the installed version
+            # back after install. No explicit pin avoids the PEP 440
+            # local-version segment headaches that nightly wheels have
+            # (e.g. 8.1.0.dev53+gabcdef).
+            #
+            # `--index-strategy unsafe-best-match` is required because
+            # uv's default ("first-index") only considers a single
+            # index per package; a nightly channel often hosts the core
+            # package AND its compiled deps, and its latest wheels
+            # sometimes don't match the runner platform.
+            # unsafe-best-match lets uv fall back to PyPI in that case.
+            core_spec = {
+                "install": core_name,
+                "version": "",
+                "extra_index_urls": dev_index_urls,
+                "prerelease_strategy": "allow",
+                "index_strategy": "unsafe-best-match",
+            }
+        else:
+            # No nightly channel configured: install the core package's
+            # dev version straight from the HEAD of its repository.
+            core_spec = {
+                "install": f"{core_name} @ git+{core['repo_url']}",
+                "version": "",
+                "extra_index_urls": [],
+                "prerelease_strategy": "allow",
+                "index_strategy": None,
+            }
 
         def pkg_spec(pkg):
             repo = pkg.get("repo_url")
@@ -117,10 +130,10 @@ def resolve_specs(packages, variant):
 
     else:
         include_pre = variant == "pre"
-        astropy_ver = latest_pypi("astropy", include_prereleases=include_pre)
-        astropy = {
-            "install": f"astropy=={astropy_ver}",
-            "version": astropy_ver,
+        core_ver = latest_pypi(core_name, include_prereleases=include_pre)
+        core_spec = {
+            "install": f"{core_name}=={core_ver}",
+            "version": core_ver,
             "extra_index_urls": [],
             "prerelease_strategy": "allow"
             if include_pre
@@ -138,7 +151,7 @@ def resolve_specs(packages, variant):
     for pkg in packages:
         spec, target = pkg_spec(pkg)
         pkg_specs.append((pkg, spec, target))
-    return astropy, pkg_specs
+    return core_spec, pkg_specs
 
 
 def _resolver_conflict(stderr):
@@ -248,19 +261,6 @@ def _write_no_downgrade_constraints(python, path):
     Path(path).write_text("\n".join(lines) + ("\n" if lines else ""))
 
 
-def _load_packages(path):
-    raw = yaml.safe_load(Path(path).read_text()) or {}
-    return list(raw.get("packages", []))
-
-
-def _load_python_versions(path):
-    raw = yaml.safe_load(Path(path).read_text()) or {}
-    versions = raw.get("python_versions") or []
-    if not versions:
-        versions = ["3.12"]
-    return [str(v) for v in versions]
-
-
 # Ordering of tiers when installing/displaying. Unknown tiers sort last.
 TIER_RANK = {"coordinated": 0, "affiliated": 1, "pyopensci": 2, "other": 3}
 
@@ -287,10 +287,12 @@ def _run_install(install_cmd, timeout):
     return proc.returncode, (proc.stderr or proc.stdout)
 
 
-def run_variant(variant, python_version, packages, repo_root, results_dir, timeouts):
-    astropy, pkg_specs = resolve_specs(packages, variant)
+def run_variant(
+    variant, python_version, packages, repo_root, results_dir, timeouts, core
+):
+    core_spec, pkg_specs = resolve_specs(packages, variant, core)
     print(f"\n=== Variant: {variant} (Python {python_version}) ===")
-    print(f"  astropy: {astropy['install']}")
+    print(f"  {core['pypi_name']}: {core_spec['install']}")
     for pkg, spec, target in pkg_specs:
         print(f"  {pkg['pypi_name']:<20} {spec or '(no install spec)'}")
 
@@ -298,11 +300,12 @@ def run_variant(variant, python_version, packages, repo_root, results_dir, timeo
         "variant": variant,
         "started_at": datetime.now(timezone.utc).isoformat(timespec="seconds"),
         "finished_at": "",
-        "astropy": {
-            "install_spec": astropy["install"],
-            "version": astropy["version"],
-            "extra_index_urls": astropy["extra_index_urls"],
-            "prerelease_strategy": astropy["prerelease_strategy"],
+        "core": {
+            "name": core["pypi_name"],
+            "install_spec": core_spec["install"],
+            "version": core_spec["version"],
+            "extra_index_urls": core_spec["extra_index_urls"],
+            "prerelease_strategy": core_spec["prerelease_strategy"],
         },
         "python_requested": python_version,
         "python_version": "",
@@ -341,29 +344,29 @@ def run_variant(variant, python_version, packages, repo_root, results_dir, timeo
         constraints_path = os.path.join(tmpdir, "no-downgrade-constraints.txt")
 
         common = ["uv", "pip", "install", "--python", python, "-q"]
-        for url in astropy["extra_index_urls"]:
+        for url in core_spec["extra_index_urls"]:
             common += ["--extra-index-url", url]
-        common += [f"--prerelease={astropy['prerelease_strategy']}"]
-        if astropy.get("index_strategy"):
-            common += [f"--index-strategy={astropy['index_strategy']}"]
+        common += [f"--prerelease={core_spec['prerelease_strategy']}"]
+        if core_spec.get("index_strategy"):
+            common += [f"--index-strategy={core_spec['index_strategy']}"]
 
-        print("\nInstalling astropy + pytest...")
+        print(f"\nInstalling {core['pypi_name']} + pytest...")
         # pytest-remotedata registers the `remote_data` marker many
         # astropy ecosystem packages use; with the plugin installed but
         # `--remote-data` not passed, those tests are skipped automatically
         # instead of running and timing out on network calls.
         rc, err = _run_install(
             common
-            + [astropy["install"], "pytest", "pytest-timeout", "pytest-remotedata"],
+            + [core_spec["install"], "pytest", "pytest-timeout", "pytest-remotedata"],
             timeouts["install"],
         )
         if rc != 0:
-            print("  FATAL: astropy install failed")
+            print(f"  FATAL: {core['pypi_name']} install failed")
             print(err)
             result["fatal_error"] = err
             return result, out_path
-        result["astropy"]["version"] = (
-            _pkg_version(python, "astropy") or result["astropy"]["version"]
+        result["core"]["version"] = (
+            _pkg_version(python, core["pypi_name"]) or result["core"]["version"]
         )
         _write_no_downgrade_constraints(python, constraints_path)
 
@@ -477,12 +480,13 @@ def add_arguments(ap):
     ap.add_argument(
         "--variant",
         choices=status.VARIANTS,
-        help="Variant to run; if omitted, runs all variants in sequence.",
+        help="Only run configured columns with this variant; "
+        "if omitted, every configured column runs.",
     )
     ap.add_argument(
         "--python",
-        help="Python version to run against (e.g. '3.12', '3.14t'); "
-        "if omitted, runs every version listed in the config.",
+        help="Only run configured columns with this Python version "
+        "(e.g. '3.12', '3.14t'); if omitted, every configured column runs.",
     )
     ap.add_argument("--packages", help="Comma-separated subset of package names to run")
     ap.add_argument(
@@ -499,7 +503,8 @@ def run(args):
     # instead of buffering until the script exits.
     sys.stdout.reconfigure(line_buffering=True)
 
-    all_packages = _load_packages(args.config)
+    core = config.load_core_package(args.config)
+    all_packages = config.load_packages(args.config)
     packages = all_packages
     if args.tiers:
         wanted_tiers = {t.strip() for t in args.tiers.split(",") if t.strip()}
@@ -521,21 +526,25 @@ def run(args):
     results_dir.mkdir(parents=True, exist_ok=True)
 
     timeouts = {"install": args.timeout_install, "test": args.timeout_test}
-    variants_to_run = [args.variant] if args.variant else list(status.VARIANTS)
-    pythons_to_run = (
-        [args.python] if args.python else _load_python_versions(args.config)
-    )
+
+    columns = config.load_columns(args.config)
+    if args.variant:
+        columns = [c for c in columns if c["variant"] == args.variant]
+    if args.python:
+        columns = [c for c in columns if c["python"] == args.python]
+    if not columns:
+        sys.exit("No configured columns match the given --variant/--python filters.")
 
     fatal_combos = []
-    for python_version in pythons_to_run:
-        for variant in variants_to_run:
-            result, out_path = run_variant(
-                variant, python_version, packages, repo_root, results_dir, timeouts
-            )
-            print(f"\nDone {variant}/{python_version}: {_counts(result)}")
-            print(f"Wrote {out_path}")
-            if result.get("fatal_error"):
-                fatal_combos.append(f"{variant}/{python_version}")
+    for column in columns:
+        variant, python_version = column["variant"], column["python"]
+        result, out_path = run_variant(
+            variant, python_version, packages, repo_root, results_dir, timeouts, core
+        )
+        print(f"\nDone {variant}/{python_version}: {_counts(result)}")
+        print(f"Wrote {out_path}")
+        if result.get("fatal_error"):
+            fatal_combos.append(f"{variant}/{python_version}")
 
     if fatal_combos:
-        sys.exit(f"\nAstropy install failed for: {', '.join(fatal_combos)}")
+        sys.exit(f"\n{core['pypi_name']} install failed for: {', '.join(fatal_combos)}")

@@ -4,8 +4,9 @@ Reads every results/<variant>__<python>.json that `astropy-integration run`
 wrote and emits a single self-contained `site/index.html` with:
 
   - one row per package
-  - one column group per Python version, subdivided into the three
-    astropy variants (stable / pre / dev)
+  - one column per configured (python, variant) pair, in config
+    order; consecutive columns that share a Python version are
+    grouped under a spanning header
   - a "Failure logs" section at the bottom with collapsible <details>
     for every non-passing cell, anchored from the matching badge
 """
@@ -18,7 +19,7 @@ from pathlib import Path
 
 from jinja2 import Environment, PackageLoader, select_autoescape
 
-from . import status
+from . import config, status
 
 
 def _anchor_id(name, variant, python):
@@ -43,17 +44,37 @@ def _load_results(results_dir):
     return by_combo
 
 
-def _column_groups(by_combo):
-    """Discover Python versions and order columns.
+def _column_groups(by_combo, config_columns):
+    """Order the columns that produced results and group them for the header.
+
+    Columns are ordered to match the `columns:` list in the config; any
+    result not listed there (e.g. a leftover JSON from an old config) is
+    appended afterwards, sorted. The header groups *consecutive* columns
+    that share a Python version, so a config that pairs each Python with
+    a single variant renders as plain columns while the classic
+    python x variant layout still renders as spanning groups.
 
     Returns:
-      pythons: sorted list of Python version strings (preserves config-style
-               ordering: shorter strings first, then alphabetical).
       columns: flat list of (python, variant) tuples in display order.
+      groups:  list of {"python", "span"} dicts for the top header row.
     """
-    pythons = sorted({p for _, p in by_combo}, key=lambda s: (len(s), s))
-    columns = [(p, v) for p in pythons for v in status.VARIANTS]
-    return pythons, columns
+    present = set(by_combo)  # {(variant, python), ...}
+    columns = []
+    for col in config_columns:
+        key = (col["variant"], col["python"])
+        if key in present:
+            columns.append((col["python"], col["variant"]))
+            present.discard(key)
+    for variant, python in sorted(present):
+        columns.append((python, variant))
+
+    groups = []
+    for python, _variant in columns:
+        if groups and groups[-1]["python"] == python:
+            groups[-1]["span"] += 1
+        else:
+            groups.append({"python": python, "span": 1})
+    return columns, groups
 
 
 def _variant_meta(variant, python, data):
@@ -63,8 +84,8 @@ def _variant_meta(variant, python, data):
         "variant": variant,
         "python": python,
         "has_data": True,
-        "astropy_version": data["astropy"]["version"],
-        "extra_index_urls": data["astropy"].get("extra_index_urls") or [],
+        "core_version": data["core"]["version"],
+        "extra_index_urls": data["core"].get("extra_index_urls") or [],
         "python_version": data.get("python_version") or python,
         "started_at": data["started_at"],
         "finished_at": data["finished_at"],
@@ -156,7 +177,7 @@ def _failures(by_combo, columns):
     return out
 
 
-def build(results_dir, output_dir):
+def build(results_dir, output_dir, config_path):
     results_dir = Path(results_dir)
     output_dir = Path(output_dir)
     if output_dir.exists():
@@ -168,16 +189,19 @@ def build(results_dir, output_dir):
         autoescape=select_autoescape(["html"]),
     )
 
+    config_columns = config.load_columns(config_path)
+    core = config.load_core_package(config_path)
+    title = config.load_dashboard_title(config_path)
+
     by_combo = _load_results(results_dir)
-    pythons, columns = _column_groups(by_combo)
+    columns, column_groups = _column_groups(by_combo, config_columns)
     names = _ordered_packages(by_combo)
     rows = _make_rows(by_combo, names, columns)
     tier_groups = _group_rows_by_tier(rows)
     failures = _failures(by_combo, columns)
     variants_meta = [
-        _variant_meta(v, p, by_combo.get((v, p)))
-        for p in pythons
-        for v in status.VARIANTS
+        _variant_meta(variant, python, by_combo.get((variant, python)))
+        for python, variant in columns
     ]
 
     # If any variant ran with a per-package test limit, surface it in
@@ -191,8 +215,10 @@ def build(results_dir, output_dir):
 
     (output_dir / "index.html").write_text(
         env.get_template("index.html").render(
-            pythons=pythons,
-            variants=list(status.VARIANTS),
+            title=title,
+            core_name=core["pypi_name"],
+            column_groups=column_groups,
+            columns=columns,
             variants_meta=variants_meta,
             tier_groups=tier_groups,
             failures=failures,
@@ -203,9 +229,10 @@ def build(results_dir, output_dir):
 
 
 def add_arguments(ap):
+    ap.add_argument("--config", default="packages.yaml")
     ap.add_argument("--results-dir", default="results")
     ap.add_argument("--output", default="site")
 
 
 def run(args):
-    build(args.results_dir, args.output)
+    build(args.results_dir, args.output, args.config)

@@ -1,24 +1,49 @@
-# Packages tested by `astropy-integration run`.
+# Configuration for `astropy-integration run`.
 #
-# One block per package = one row in the dashboard. For each astropy
-# variant (stable / pre / dev) and each Python version, the runner
-# builds a shared venv, installs astropy first then each package in
-# turn (skipping any that the resolver can't satisfy alongside the
-# existing set), then runs `pytest --pyargs <module>` for each one
-# that installed.
+# `core_package` is the ecosystem's core package. The runner builds a
+# shared venv, installs the core package first, then installs each
+# entry under `packages` in turn (skipping any the resolver can't
+# satisfy alongside the existing set), then runs `pytest --pyargs
+# <module>` for each one that installed. Point this file at a
+# different core package to test a different ecosystem.
 #
-# `tier` is purely a category label used for ordering and the optional
-# `--tiers` CLI filter. Conventions: `coordinated` for the official
-# coordinated set, `affiliated` for affiliated packages from the frozen
-# pre-APE 22 registry, `pyopensci` for affiliated packages reviewed
-# through the pyOpenSci process, `other` for anything else worth testing.
+# `columns` is the flat list of test configurations to run; each is a
+# (python, variant) pair and becomes one dashboard column. Python
+# version and variant are independent -- list whatever combinations
+# you want. Use uv's notation for Python, so e.g. "3.14t" for the
+# free-threaded build. Variants:
+#   stable -- core package + each package at their latest non-pre-release on PyPI
+#   pre    -- same, but latest including pre-releases
+#   dev    -- core package from its nightly wheels (or git HEAD if
+#             `dev_index_urls` is unset); each package from git HEAD
 #
-# `python_versions` is the list of Python versions to test against;
-# use uv's notation, so e.g. "3.14t" for the free-threaded build.
+# `tier` (on each package) is purely a category label used for
+# ordering and the optional `--tiers` CLI filter. Conventions:
+# `coordinated` for the official coordinated set, `affiliated` for
+# affiliated packages from the frozen pre-APE 22 registry, `pyopensci`
+# for affiliated packages reviewed through the pyOpenSci process,
+# `other` for anything else worth testing.
 
-python_versions:
-  - "3.12"
-  - "3.14"
+core_package:
+  pypi_name: astropy
+  module: astropy
+  repo_url: https://github.com/astropy/astropy.git
+  # For the `dev` variant the core package is installed from these
+  # nightly wheel indexes (liberfa hosts pyerfa's dev wheels). Omit
+  # `dev_index_urls` to install the dev version from `git+repo_url`.
+  dev_index_urls:
+    - https://pypi.anaconda.org/astropy/simple
+    - https://pypi.anaconda.org/liberfa/simple
+
+dashboard_title: Astropy ecosystem integration matrix
+
+columns:
+  - {python: "3.12", variant: stable}
+  - {python: "3.12", variant: pre}
+  - {python: "3.12", variant: dev}
+  - {python: "3.14", variant: stable}
+  - {python: "3.14", variant: pre}
+  - {python: "3.14", variant: dev}
 
 packages:
   - pypi_name: asdf_astropy

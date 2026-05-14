@@ -6,7 +6,8 @@ dashboard) use these constants and helpers, so the strings are defined
 in exactly one place.
 """
 
-# The three astropy variants. Listed once here so both scripts agree.
+# The recognised core-package variants. Listed once here so both
+# scripts (and config validation) agree.
 VARIANTS = ("stable", "pre", "dev")
 
 # install_status values, used in results/<variant>.json
