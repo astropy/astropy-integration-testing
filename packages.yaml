@@ -215,10 +215,11 @@ packages:
     module: hips
     repo_url: https://github.com/hipspy/hips.git
 
-  - pypi_name: imexam
-    tier: affiliated
-    module: imexam
-    repo_url: https://github.com/spacetelescope/imexam.git
+  # imexam is no longer maintained, so it is excluded from the matrix.
+  # - pypi_name: imexam
+  #   tier: affiliated
+  #   module: imexam
+  #   repo_url: https://github.com/spacetelescope/imexam.git
 
   - pypi_name: kanon
     tier: affiliated
