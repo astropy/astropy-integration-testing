@@ -235,7 +235,16 @@ def _write_no_downgrade_constraints(python, path):
     poisoning the venv for everything tested afterwards.
     """
     frozen = _freeze(python)
-    lines = [f"{name}>={ver}" for name, ver in sorted(frozen.items())]
+    lines = []
+    for name, ver in sorted(frozen.items()):
+        try:
+            # Drop any PEP 440 local-version segment (e.g. the '+g1a2b3c4'
+            # on astropy/pyerfa nightly wheels): uv rejects a '>=' specifier
+            # with a local segment and would fail to parse the whole file.
+            public = Version(ver).public
+        except InvalidVersion:
+            continue
+        lines.append(f"{name}>={public}")
     Path(path).write_text("\n".join(lines) + ("\n" if lines else ""))
 
 
