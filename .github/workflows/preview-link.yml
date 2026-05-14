@@ -1,0 +1,30 @@
+name: preview-link
+
+# Companion to `integration-matrix`. When that workflow finishes on
+# a pull request, this one attaches a status check to the source
+# commit whose "Details" link goes directly to the dashboard-preview
+# artifact (rendered HTML), skipping the artifact summary page.
+#
+# Must live on the default branch to take effect.
+
+on:
+  workflow_run:
+    workflows: ["integration-matrix"]
+    types: [requested, in_progress, completed]
+
+permissions: {}
+
+jobs:
+  redirect:
+    runs-on: ubuntu-latest
+    permissions:
+      statuses: write   # to attach a status check to the source commit
+      actions: read     # to look up the source workflow's artifact id
+    steps:
+      - uses: agriyakhetarpal/github-actions-artifacts-redirector-action@683d25ace2cb0aefe8e6719c39c2ac7f3d22dd8c  # v1.0.0
+        with:
+          repo-token: ${{ secrets.GITHUB_TOKEN }}
+          # With `archive: false`, artifact-name is the uploaded file's
+          # basename without extension (we upload site/index.html).
+          artifact-name: index
+          job-title: View dashboard preview

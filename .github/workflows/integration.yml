@@ -1,0 +1,132 @@
+name: integration-matrix
+
+on:
+  schedule:
+    - cron: '0 6 * * 0'   # Sundays at 06:00 UTC
+  workflow_dispatch:
+  pull_request:
+
+permissions:
+  contents: write       # to push gh-pages on main / schedule / dispatch
+  pull-requests: none   # explicit: this workflow never touches PRs
+
+concurrency:
+  # One in-flight run per PR, one per main/dispatch invocation.
+  # PR runs cancel previous in-progress ones; main runs queue.
+  group: integration-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  variant:
+    strategy:
+      fail-fast: false
+      matrix:
+        # Keep in sync with `python_versions` in packages.yaml.
+        # (free-threaded builds: use the "t" suffix, e.g. "3.14t".)
+        python: ["3.12", "3.14"]
+        variant: [stable, pre, dev]
+    runs-on: ubuntu-latest
+    timeout-minutes: 240
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5  # v4.3.1
+
+      # This Python only runs the `astropy-integration` orchestrator CLI;
+      # the test venv for `matrix.python` is built separately by uv (see
+      # the `run` step below), so a fixed version is fine here.
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065  # v5.6.0
+        with:
+          python-version: '3.12'
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@caf0cab7a618c569241d31dcd442f54681755d39  # v3.2.4
+        with:
+          # We manage the cache ourselves via actions/cache below; turning
+          # off setup-uv's own caching avoids it saving a duplicate of the
+          # same directory under its own key.
+          enable-cache: false
+
+      - name: Cache ~/.cache/uv
+        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830  # v4.3.0
+        with:
+          path: ~/.cache/uv
+          # Primary key uses the run id, so every run writes a fresh
+          # snapshot (after `uv cache prune --ci` slims it to wheels
+          # actually used in this run). The restore-keys are prefix
+          # matches against saved keys, so the first one always finds
+          # the most recent run's cache for the same (os, variant,
+          # python) and the next run starts warm.
+          key: uv-${{ runner.os }}-${{ matrix.variant }}-${{ matrix.python }}-${{ github.run_id }}
+          restore-keys: |
+            uv-${{ runner.os }}-${{ matrix.variant }}-${{ matrix.python }}-
+            uv-${{ runner.os }}-${{ matrix.variant }}-
+            uv-${{ runner.os }}-
+
+      - name: Install astropy-integration
+        run: pip install .
+
+      - name: Run ${{ matrix.variant }} variant on Python ${{ matrix.python }}
+        env:
+          # PR previews limit each package to the first 10 tests so the
+          # matrix finishes in minutes; conftest.py at the repo root reads
+          # this env var and truncates the collected items.
+          PYTEST_LIMIT_N: ${{ github.event_name == 'pull_request' && '10' || '' }}
+        run: astropy-integration run --variant ${{ matrix.variant }} --python ${{ matrix.python }}
+
+      - name: Prune uv cache before save
+        if: always()
+        # Strips pre-built sdists and other entries uv won't reuse, so
+        # the snapshot the cache step uploads stays lean.
+        run: uv cache prune --ci
+
+      - name: Upload results
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02  # v4.6.2
+        with:
+          name: results-${{ matrix.variant }}-${{ matrix.python }}
+          path: results/${{ matrix.variant }}__${{ matrix.python }}.json
+
+  dashboard:
+    needs: variant
+    if: always()
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5  # v4.3.1
+
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065  # v5.6.0
+        with:
+          python-version: '3.12'
+
+      - name: Install astropy-integration
+        run: pip install .
+
+      - name: Download all variant results
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093  # v4.3.0
+        with:
+          pattern: results-*
+          merge-multiple: true
+          path: results/
+
+      - name: Build dashboard
+        run: astropy-integration dashboard
+
+      # PR path: upload index.html as a non-zipped artifact for the
+      # in-browser preview (linked from a PR check by preview-link.yml).
+      - name: Upload preview artifact
+        if: github.event_name == 'pull_request'
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a  # v7.0.1
+        with:
+          name: dashboard-preview
+          path: site/index.html
+          archive: false
+          overwrite: true
+
+      # Main / schedule / dispatch path: publish to gh-pages.
+      - name: Publish to gh-pages
+        if: github.event_name != 'pull_request'
+        uses: peaceiris/actions-gh-pages@4f9cc6602d3f66b9c108549d475ec49e8ef4d45e  # v4.0.0
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./site
+          force_orphan: true
+          commit_message: Update integration dashboard

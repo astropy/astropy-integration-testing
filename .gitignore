@@ -1,3 +1,7 @@
-.tox
-.hypothesis
-result_images
+.tmp/
+results/
+site/
+__pycache__/
+*.pyc
+*.egg-info/
+build/

@@ -1,0 +1,112 @@
+{% extends "_base.html" %}
+{% block title %}Astropy integration matrix{% endblock %}
+{% block body %}
+<h1>Astropy ecosystem integration matrix</h1>
+
+{% if pytest_limit %}
+<div class="banner">
+  <strong>Preview run:</strong> each package limited to the first
+  <code>{{ pytest_limit }}</code> tests for fast PR feedback. Treat the matrix as
+  a smoke check, not a full regression signal.
+</div>
+{% endif %}
+
+<table class="meta-table">
+<thead><tr><th>Python</th><th>Variant</th><th>Astropy</th><th>Started</th><th>Finished</th></tr></thead>
+<tbody>
+{% for v in variants_meta %}
+<tr>
+  <td><code>{{ v.python }}</code></td>
+  <td><code>{{ v.variant }}</code></td>
+  <td>{% if v.has_data %}{{ v.astropy_version }}{% if v.extra_index_urls %} <small style="color:#999">(nightly)</small>{% endif %}{% else %}-{% endif %}</td>
+  <td>{% if v.has_data %}{{ v.started_at }}{% else %}-{% endif %}</td>
+  <td>{% if v.has_data %}{{ v.finished_at or "(in progress)" }}{% else %}-{% endif %}</td>
+</tr>
+{% endfor %}
+</tbody>
+</table>
+
+<h2>Matrix</h2>
+<table class="matrix">
+<thead>
+<tr>
+  <th rowspan="2">Package</th>
+  {% for p in pythons %}<th colspan="{{ variants|length }}" class="python-group">Python {{ p }}</th>{% endfor %}
+</tr>
+<tr>
+  {% for p in pythons %}{% for v in variants %}<th>{{ v }}</th>{% endfor %}{% endfor %}
+</tr>
+</thead>
+<tbody>
+{% for tier, group in tier_groups %}
+<tr class="tier-header">
+  <th colspan="{{ 1 + pythons|length * variants|length }}">{{ tier|capitalize }}</th>
+</tr>
+{% for row in group %}
+<tr>
+  <td><span class="pkg-name">{{ row.name }}</span></td>
+  {% for cell in row.cells %}
+  <td>
+    {% if cell.anchor %}
+    <a class="cell-link" href="#{{ cell.anchor }}"><span class="pill {{ cell.status }}">{{ cell.label }}</span></a>
+    {% else %}
+    <span class="pill {{ cell.status }}">{{ cell.label }}</span>
+    {% endif %}
+    {% if cell.resolved_version %}<br><small style="color:#999">{{ cell.resolved_version }}</small>{% endif %}
+  </td>
+  {% endfor %}
+</tr>
+{% endfor %}
+{% endfor %}
+</tbody>
+</table>
+
+<div class="legend">Legend:
+  <span class="pill pass">pass</span>
+  <span class="pill fail">fail</span>
+  <span class="pill timeout">timeout</span>
+  <span class="pill no-tests">no tests</span>
+  <span class="pill skipped">skipped</span>
+  <span class="pill install-fail">install fail</span>
+  <span class="pill missing">missing</span>
+</div>
+<p class="legend"><strong>skipped</strong>: resolver couldn't satisfy this package alongside the rest of the venv. <strong>install fail</strong>: install step crashed for some other reason (build error, etc.).</p>
+
+{% if failures %}
+<h2>Failure logs</h2>
+<p class="legend">Click any non-passing badge above to jump to its log; the section will auto-expand.</p>
+{% for f in failures %}
+<details id="{{ f.anchor }}">
+  <summary>
+    <span class="pkg-name">{{ f.name }}</span>
+    <small style="color:#6a737d">({{ f.variant }} / Python {{ f.python }})</small>
+    <span class="pill {{ f.status }}">{{ f.label }}</span>
+  </summary>
+  {% if f.install_error %}
+  <h3>Install error</h3>
+  <pre>{{ f.install_error }}</pre>
+  {% endif %}
+  {% if f.test_output %}
+  <h3>Test output</h3>
+  <pre>{{ f.test_output }}</pre>
+  {% endif %}
+</details>
+{% endfor %}
+{% else %}
+<p class="legend">No failures &mdash; every package passed in every variant that ran.</p>
+{% endif %}
+
+<script>
+function openTarget() {
+  const id = location.hash.slice(1);
+  if (!id) return;
+  const el = document.getElementById(id);
+  if (el && el.tagName === "DETAILS") {
+    el.open = true;
+    el.scrollIntoView({behavior: "instant", block: "start"});
+  }
+}
+openTarget();
+addEventListener("hashchange", openTarget);
+</script>
+{% endblock %}
