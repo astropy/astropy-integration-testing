@@ -15,8 +15,8 @@ after each scheduled run.
 How it works
 ------------
 
-Three CI jobs run on a schedule (and on `workflow_dispatch`), one per
-astropy variant:
+The `variant` job runs on a schedule (and on `workflow_dispatch`) as a
+matrix over astropy variant and Python version. The three variants are:
 
 | Variant  | Astropy                                             | Each package                           |
 |----------|-----------------------------------------------------|----------------------------------------|
@@ -24,7 +24,7 @@ astropy variant:
 | `pre`    | Latest including pre-releases (`--prerelease=allow`)| Latest including pre-releases          |
 | `dev`    | Latest dev wheel from the astropy/simple channel    | `git+<repo_url>` (HEAD of main branch) |
 
-Within each job, a single shared venv is built and packages are
+Within each matrix job, a single shared venv is built and packages are
 installed one at a time in a deterministic order (coordinated first,
 alphabetical within each tier). If a package can't be installed
 alongside the existing venv (e.g., it pins `astropy<7` but we already
@@ -32,8 +32,8 @@ installed astropy 8), it's skipped and recorded; the rest of the venv
 is untouched. After installs, `pytest --pyargs <module>` runs for each
 package that installed successfully.
 
-A fourth job downloads the three result JSONs and publishes the
-dashboard to `gh-pages`.
+The `dashboard` job then downloads the per-matrix-job result JSONs and
+publishes the dashboard to `gh-pages`.
 
 What's in the repo
 ------------------
@@ -103,7 +103,7 @@ Edit `packages.yaml`. Each entry takes:
 
 - `pypi_name` (the package's name on PyPI; also used as the row label)
 - `tier` (label used for ordering and the `--tiers` filter; conventional
-  values are `coordinated`, `affiliated`, `other`)
+  values are `coordinated`, `affiliated`, `pyopensci`, `other`)
 - `module` (the top-level Python module name, for `pytest --pyargs`)
 - `repo_url` (for the `dev` variant install)
 - `install_extras` (list, e.g. `[test, all]`)

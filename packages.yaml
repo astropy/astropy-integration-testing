@@ -9,8 +9,9 @@
 #
 # `tier` is purely a category label used for ordering and the optional
 # `--tiers` CLI filter. Conventions: `coordinated` for the official
-# coordinated set, `affiliated` for affiliated packages, `other` for
-# anything else worth testing.
+# coordinated set, `affiliated` for affiliated packages from the frozen
+# pre-APE 22 registry, `pyopensci` for affiliated packages reviewed
+# through the pyOpenSci process, `other` for anything else worth testing.
 #
 # `python_versions` is the list of Python versions to test against;
 # use uv's notation, so e.g. "3.14t" for the free-threaded build.
@@ -333,3 +334,47 @@ packages:
     tier: affiliated
     module: synphot
     repo_url: https://github.com/spacetelescope/synphot_refactor.git
+
+  # --- Affiliated packages reviewed through the pyOpenSci process and
+  # cross-listed at https://www.pyopensci.org/python-packages.html
+  # (post-APE 22; not in the frozen registry.json above).
+  - pypi_name: astrodata
+    tier: pyopensci
+    module: astrodata
+    repo_url: https://github.com/GeminiDRSoftware/astrodata.git
+
+  - pypi_name: astromartini
+    tier: pyopensci
+    # installed and imported as `martini`; `astromartini` is just the PyPI name.
+    module: martini
+    repo_url: https://github.com/kyleaoman/martini.git
+    install_extras: [testing]
+
+  - pypi_name: autogalaxy
+    tier: pyopensci
+    module: autogalaxy
+    repo_url: https://github.com/PyAutoLabs/PyAutoGalaxy.git
+    install_extras: [test]
+
+  - pypi_name: GALFITools
+    tier: pyopensci
+    module: galfitools   # installed package name is lowercase
+    repo_url: https://github.com/canorve/GALFITools.git
+    install_extras: [testing]
+
+  - pypi_name: petrofit
+    tier: pyopensci
+    module: petrofit
+    repo_url: https://github.com/PetroFit/petrofit.git
+    install_extras: [dev]
+
+  - pypi_name: stingray
+    tier: pyopensci
+    module: stingray
+    repo_url: https://github.com/StingraySoftware/stingray.git
+    install_extras: [test]
+
+  - pypi_name: zodipy
+    tier: pyopensci
+    module: zodipy
+    repo_url: https://github.com/Cosmoglobe/zodipy.git

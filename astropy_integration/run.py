@@ -237,11 +237,11 @@ def _load_python_versions(path):
 
 
 # Ordering of tiers when installing/displaying. Unknown tiers sort last.
-TIER_RANK = {"coordinated": 0, "affiliated": 1, "other": 2}
+TIER_RANK = {"coordinated": 0, "affiliated": 1, "pyopensci": 2, "other": 3}
 
 
 def _install_order(packages):
-    """Coordinated before affiliated before other, alphabetical within each tier."""
+    """Coordinated, then affiliated, then pyopensci, then other; alphabetical within each tier."""
     return sorted(
         packages,
         key=lambda p: (

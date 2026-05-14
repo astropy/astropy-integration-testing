@@ -7,7 +7,8 @@ on:
   pull_request:
 
 permissions:
-  contents: write   # to push gh-pages on main / schedule / dispatch
+  contents: write       # to push gh-pages on main / schedule / dispatch
+  pull-requests: none   # explicit: this workflow never touches PRs
 
 concurrency:
   # One in-flight run per PR, one per main/dispatch invocation.
@@ -29,6 +30,9 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      # This Python only runs the `astropy-integration` orchestrator CLI;
+      # the test venv for `matrix.python` is built separately by uv (see
+      # the `run` step below), so a fixed version is fine here.
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
