@@ -104,10 +104,11 @@ packages:
     module: astroalign
     repo_url: https://github.com/quatrope/astroalign.git
 
-  - pypi_name: astroML
-    tier: affiliated
-    module: astroML
-    repo_url: https://github.com/astroML/astroML.git
+  # astroML is no longer maintained, so it is excluded from the matrix.
+  # - pypi_name: astroML
+  #   tier: affiliated
+  #   module: astroML
+  #   repo_url: https://github.com/astroML/astroML.git
 
   - pypi_name: astroplan
     tier: affiliated
