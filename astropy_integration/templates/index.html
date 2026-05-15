@@ -1,7 +1,7 @@
 {% extends "_base.html" %}
-{% block title %}Astropy integration matrix{% endblock %}
+{% block title %}{{ title }}{% endblock %}
 {% block body %}
-<h1>Astropy ecosystem integration matrix</h1>
+<h1>{{ title }}</h1>
 
 {% if pytest_limit %}
 <div class="banner">
@@ -12,13 +12,13 @@
 {% endif %}
 
 <table class="meta-table">
-<thead><tr><th>Python</th><th>Variant</th><th>Astropy</th><th>Started</th><th>Finished</th></tr></thead>
+<thead><tr><th>Python</th><th>Variant</th><th>{{ core_name }}</th><th>Started</th><th>Finished</th></tr></thead>
 <tbody>
 {% for v in variants_meta %}
 <tr>
   <td><code>{{ v.python }}</code></td>
   <td><code>{{ v.variant }}</code></td>
-  <td>{% if v.has_data %}{{ v.astropy_version }}{% if v.extra_index_urls %} <small style="color:#999">(nightly)</small>{% endif %}{% else %}-{% endif %}</td>
+  <td>{% if v.has_data %}{{ v.core_version }}{% if v.extra_index_urls %} <small style="color:#999">(nightly)</small>{% endif %}{% else %}-{% endif %}</td>
   <td>{% if v.has_data %}{{ v.started_at }}{% else %}-{% endif %}</td>
   <td>{% if v.has_data %}{{ v.finished_at or "(in progress)" }}{% else %}-{% endif %}</td>
 </tr>
@@ -31,16 +31,16 @@
 <thead>
 <tr>
   <th rowspan="2">Package</th>
-  {% for p in pythons %}<th colspan="{{ variants|length }}" class="python-group">Python {{ p }}</th>{% endfor %}
+  {% for g in column_groups %}<th colspan="{{ g.span }}" class="python-group">Python {{ g.python }}</th>{% endfor %}
 </tr>
 <tr>
-  {% for p in pythons %}{% for v in variants %}<th>{{ v }}</th>{% endfor %}{% endfor %}
+  {% for python, variant in columns %}<th>{{ variant }}</th>{% endfor %}
 </tr>
 </thead>
 <tbody>
 {% for tier, group in tier_groups %}
 <tr class="tier-header">
-  <th colspan="{{ 1 + pythons|length * variants|length }}">{{ tier|capitalize }}</th>
+  <th colspan="{{ 1 + columns|length }}">{{ tier|capitalize }}</th>
 </tr>
 {% for row in group %}
 <tr>
