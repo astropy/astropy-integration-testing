@@ -84,16 +84,13 @@ jobs:
             uv-${{ runner.os }}-${{ matrix.variant }}-
             uv-${{ runner.os }}-
 
-      - name: Install astropy-integration
-        run: pip install .
-
       - name: Run ${{ matrix.variant }} variant on Python ${{ matrix.python }}
         env:
           # PR previews limit each package to the first 10 tests so the
           # matrix finishes in minutes; conftest.py at the repo root reads
           # this env var and truncates the collected items.
           PYTEST_LIMIT_N: ${{ github.event_name == 'pull_request' && '10' || '' }}
-        run: astropy-integration run --variant ${{ matrix.variant }} --python ${{ matrix.python }}
+        run: uv run astropy-integration run --variant ${{ matrix.variant }} --python ${{ matrix.python }}
 
       - name: Prune uv cache before save
         if: always()
@@ -120,9 +117,6 @@ jobs:
         with:
           python-version: '3.12'
 
-      - name: Install astropy-integration
-        run: pip install .
-
       - name: Download all variant results
         uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c  # v8.0.1
         with:
@@ -131,7 +125,7 @@ jobs:
           path: results/
 
       - name: Build dashboard
-        run: astropy-integration dashboard
+        run: uv run astropy-integration dashboard
 
       # PR path: upload index.html as a non-zipped artifact for the
       # in-browser preview (linked from a PR check by preview-link.yml).
