@@ -34,6 +34,7 @@ from collections import Counter
 from datetime import datetime, timezone
 from pathlib import Path
 
+import uv
 from packaging.version import InvalidVersion, Version
 
 from . import config, status
@@ -170,12 +171,12 @@ def _resolver_conflict(stderr):
 
 def ensure_python(version):
     proc = subprocess.run(
-        ["uv", "python", "find", version], capture_output=True, text=True, timeout=60
+        [uv.find_uv_bin(), "python", "find", version], capture_output=True, text=True, timeout=60
     )
     if proc.returncode == 0:
         return proc.stdout.strip()
     inst = subprocess.run(
-        ["uv", "python", "install", version],
+        [uv.find_uv_bin(), "python", "install", version],
         capture_output=True,
         text=True,
         timeout=600,
@@ -183,7 +184,7 @@ def ensure_python(version):
     if inst.returncode != 0:
         sys.exit(f"uv python install {version}: {inst.stderr.strip()}")
     proc = subprocess.run(
-        ["uv", "python", "find", version], capture_output=True, text=True, timeout=60
+        [uv.find_uv_bin(), "python", "find", version], capture_output=True, text=True, timeout=60
     )
     if proc.returncode != 0:
         sys.exit(f"uv python find {version}: {proc.stderr.strip()}")
@@ -221,7 +222,7 @@ def _pkg_version(python, name):
 
 def _freeze(python):
     proc = subprocess.run(
-        ["uv", "pip", "freeze", "--python", python],
+        [uv.find_uv_bin(), "pip", "freeze", "--python", python],
         capture_output=True,
         text=True,
         timeout=60,
@@ -331,7 +332,7 @@ def run_variant(
         py_path = ensure_python(python_version)
         venv = os.path.join(tmpdir, "venv")
         venv_proc = subprocess.run(
-            ["uv", "venv", venv, "-p", py_path, "-q"],
+            [uv.find_uv_bin(), "venv", venv, "-p", py_path, "-q"],
             capture_output=True,
             text=True,
             timeout=120,
@@ -343,7 +344,7 @@ def run_variant(
         result["python_version"] = _venv_python_version(python)
         constraints_path = os.path.join(tmpdir, "no-downgrade-constraints.txt")
 
-        common = ["uv", "pip", "install", "--python", python, "-q"]
+        common = [uv.find_uv_bin(), "pip", "install", "--python", python, "-q"]
         for url in core_spec["extra_index_urls"]:
             common += ["--extra-index-url", url]
         common += [f"--prerelease={core_spec['prerelease_strategy']}"]

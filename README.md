@@ -68,7 +68,6 @@ Running locally
 
 ```bash
 pip install .
-# uv is required; see https://docs.astral.sh/uv/
 
 # Run one variant. Each variant takes 30-90 min depending on package count.
 astropy-integration run --variant stable

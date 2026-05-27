@@ -56,16 +56,13 @@ jobs:
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6.0.2
 
-      # This Python only runs the `astropy-integration` orchestrator CLI;
-      # the test venv for `matrix.python` is built separately by uv (see
-      # the `run` step below), so a fixed version is fine here.
-      - uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405  # v6.2.0
-        with:
-          python-version: '3.12'
-
       - name: Install uv
         uses: astral-sh/setup-uv@08807647e7069bb48b6ef5acd8ec9567f424441b  # v8.1.0
         with:
+          # This Python only runs the `astropy-integration` orchestrator CLI;
+          # the test venv for `matrix.python` is built separately by uv (see
+          # the `run` step below), so a fixed version is fine here.
+          python-version: '3.12'
           # We manage the cache ourselves via actions/cache below; turning
           # off setup-uv's own caching avoids it saving a duplicate of the
           # same directory under its own key.
@@ -87,16 +84,13 @@ jobs:
             uv-${{ runner.os }}-${{ matrix.variant }}-
             uv-${{ runner.os }}-
 
-      - name: Install astropy-integration
-        run: pip install .
-
       - name: Run ${{ matrix.variant }} variant on Python ${{ matrix.python }}
         env:
           # PR previews limit each package to the first 10 tests so the
           # matrix finishes in minutes; conftest.py at the repo root reads
           # this env var and truncates the collected items.
           PYTEST_LIMIT_N: ${{ github.event_name == 'pull_request' && '10' || '' }}
-        run: astropy-integration run --variant ${{ matrix.variant }} --python ${{ matrix.python }}
+        run: uv run astropy-integration run --variant ${{ matrix.variant }} --python ${{ matrix.python }}
 
       - name: Prune uv cache before save
         if: always()
@@ -119,12 +113,9 @@ jobs:
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6.0.2
 
-      - uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405  # v6.2.0
+      - uses: astral-sh/setup-uv@08807647e7069bb48b6ef5acd8ec9567f424441b  # v8.1.0
         with:
           python-version: '3.12'
-
-      - name: Install astropy-integration
-        run: pip install .
 
       - name: Download all variant results
         uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c  # v8.0.1
@@ -134,7 +125,7 @@ jobs:
           path: results/
 
       - name: Build dashboard
-        run: astropy-integration dashboard
+        run: uv run astropy-integration dashboard
 
       # PR path: upload index.html as a non-zipped artifact for the
       # in-browser preview (linked from a PR check by preview-link.yml).
