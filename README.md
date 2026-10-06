@@ -1,6 +1,8 @@
 Integration testing for the Astropy ecosystem
 =============================================
 
+I AM A ROBOT BEEEP BOOP
+
 [![Integration matrix](https://github.com/astropy/astropy-integration-testing/actions/workflows/integration.yml/badge.svg)](https://github.com/astropy/astropy-integration-testing/actions/workflows/integration.yml)
 
 Cross-ecosystem integration tests for the Astropy core and coordinated
