@@ -1,4 +1,5 @@
-# Configuration for `astropy-integration run`.
+# Configuration for `integration-dashboard run`
+# (https://github.com/OpenAstronomy/integration-dashboard).
 #
 # `core_package` is the ecosystem's core package. The runner builds a
 # shared venv, installs the core package first, then installs each
@@ -18,7 +19,9 @@
 #             `dev_index_urls` is unset); each package from git HEAD
 #
 # `tier` (on each package) is purely a category label used for
-# ordering and the optional `--tiers` CLI filter. Conventions:
+# ordering and the optional `--tiers` CLI filter. Tiers are installed
+# and displayed in the order they first appear in this file, so keep
+# each tier's packages together. Conventions:
 # `coordinated` for the official coordinated set, `affiliated` for
 # affiliated packages from the frozen pre-APE 22 registry, `pyopensci`
 # for affiliated packages reviewed through the pyOpenSci process,
@@ -28,6 +31,12 @@ core_package:
   pypi_name: astropy
   module: astropy
   repo_url: https://github.com/astropy/astropy.git
+  # pytest plugins added to every venv alongside pytest itself.
+  # pytest-remotedata registers the `remote_data` marker that many
+  # astropy ecosystem packages use; with the plugin installed but
+  # `--remote-data` not passed, those tests are skipped instead of
+  # running and timing out on network calls.
+  test_deps: [pytest-remotedata]
   # For the `dev` variant the core package is installed from these
   # nightly wheel indexes (liberfa hosts pyerfa's dev wheels). Omit
   # `dev_index_urls` to install the dev version from `git+repo_url`.
@@ -112,13 +121,6 @@ packages:
     module: specutils
     repo_url: https://github.com/astropy/specutils.git
     install_extras: [all, test]
-
-  - pypi_name: sunpy
-    tier: other
-    module: sunpy
-    repo_url: https://github.com/sunpy/sunpy.git
-    install_extras: [tests, all]
-    pytest_args: ["-c", "sunpy_pytest.ini"]
 
   # --- Affiliated packages auto-imported from
   # https://github.com/astropy/astropy.github.com/blob/main/affiliated/registry.json
@@ -416,3 +418,11 @@ packages:
     tier: pyopensci
     module: zodipy
     repo_url: https://github.com/Cosmoglobe/zodipy.git
+
+  # --- Other packages worth testing alongside astropy.
+  - pypi_name: sunpy
+    tier: other
+    module: sunpy
+    repo_url: https://github.com/sunpy/sunpy.git
+    install_extras: [tests, all]
+    pytest_args: ["-c", "sunpy_pytest.ini"]
