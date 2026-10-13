@@ -1,22 +1,20 @@
 # Configuration for `integration-dashboard run`
 # (https://github.com/OpenAstronomy/integration-dashboard).
 #
-# `core_package` is the ecosystem's core package. The runner builds a
-# shared venv, installs the core package first, then installs each
-# entry under `packages` in turn (skipping any the resolver can't
-# satisfy alongside the existing set), then runs `pytest --pyargs
-# <module>` for each one that installed. Point this file at a
-# different core package to test a different ecosystem.
+# Every entry under `packages` is installed into one shared venv per
+# column and tested with `pytest --pyargs <module>`. A package that would
+# need an older version of a dependency than another listed package gets
+# is reported as held back instead of being installed.
 #
 # `columns` is the flat list of test configurations to run; each is a
 # (python, variant) pair and becomes one dashboard column. Python
 # version and variant are independent -- list whatever combinations
 # you want. Use uv's notation for Python, so e.g. "3.14t" for the
 # free-threaded build. Variants:
-#   stable -- core package + each package at their latest non-pre-release on PyPI
-#   pre    -- same, but latest including pre-releases
-#   dev    -- core package from its nightly wheels (or git HEAD if
-#             `dev_index_urls` is unset); each package from git HEAD
+#   stable -- each package at its latest release
+#   pre    -- same, but including pre-releases
+#   dev    -- each package from a nightly wheel in `dev_index_urls` if
+#             one exists, otherwise from git HEAD
 #
 # `tier` (on each package) is purely a category label used for
 # ordering and the optional `--tiers` CLI filter. Tiers are installed
@@ -27,22 +25,19 @@
 # for affiliated packages reviewed through the pyOpenSci process,
 # `other` for anything else worth testing.
 
-core_package:
-  pypi_name: astropy
-  module: astropy
-  repo_url: https://github.com/astropy/astropy.git
-  # pytest plugins added to every venv alongside pytest itself.
-  # pytest-remotedata registers the `remote_data` marker that many
-  # astropy ecosystem packages use; with the plugin installed but
-  # `--remote-data` not passed, those tests are skipped instead of
-  # running and timing out on network calls.
-  test_deps: [pytest-remotedata]
-  # For the `dev` variant the core package is installed from these
-  # nightly wheel indexes (liberfa hosts pyerfa's dev wheels). Omit
-  # `dev_index_urls` to install the dev version from `git+repo_url`.
-  dev_index_urls:
-    - https://pypi.anaconda.org/astropy/simple
-    - https://pypi.anaconda.org/liberfa/simple
+# pytest plugins added to every venv alongside pytest itself.
+# pytest-remotedata registers the `remote_data` marker that many astropy
+# ecosystem packages use; with the plugin installed but `--remote-data`
+# not passed, those tests are skipped instead of running and timing out
+# on network calls.
+test_deps: [pytest-remotedata]
+
+# Nightly wheel indexes used by `dev` columns, for any package they host
+# (the astropy channel has astropy and several coordinated packages;
+# liberfa hosts pyerfa's dev wheels).
+dev_index_urls:
+  - https://pypi.anaconda.org/astropy/simple
+  - https://pypi.anaconda.org/liberfa/simple
 
 dashboard_title: Astropy ecosystem integration matrix
 
@@ -55,6 +50,12 @@ columns:
   - {python: "3.14", variant: dev}
 
 packages:
+  - pypi_name: astropy
+    tier: coordinated
+    module: astropy
+    repo_url: https://github.com/astropy/astropy.git
+    install_extras: [all, test]
+
   - pypi_name: asdf_astropy
     tier: coordinated
     module: asdf_astropy
