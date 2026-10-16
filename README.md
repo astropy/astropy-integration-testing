@@ -29,9 +29,10 @@ integration-dashboard reusable workflow at `@main`, which:
 
 1. reads `columns:` from `packages.yaml` and expands it into a job
    matrix, one job per (Python version, variant) column;
-2. in each job, builds a shared venv with astropy plus every package
-   that can be installed alongside it, and runs `pytest --pyargs
-   <module>` for each one;
+2. in each job, builds a shared venv with every listed package that can
+   be installed without dragging a shared dependency down for the
+   others (the rest are reported as held back), and runs `pytest
+   --pyargs <module>` for each one;
 3. collects the results and publishes the dashboard to `gh-pages`.
 
 Running locally
@@ -66,14 +67,13 @@ Configuration
 
 Everything is configured in `packages.yaml`:
 
-- `core_package` is astropy, installed into every venv first, together
-  with the pytest plugins listed in its `test_deps` (pytest-remotedata,
-  so `remote_data` tests are skipped). For the `dev` variant it comes
-  from the nightly wheel indexes in `dev_index_urls`.
+- `test_deps` lists pytest plugins installed in every venv alongside
+  pytest (pytest-remotedata, so `remote_data` tests are skipped).
+- `dev_index_urls` lists the nightly wheel indexes used by `dev` columns.
 - `columns` lists the (Python version, variant) pairs to test, each one
   a dashboard column. Use uv notation for Python, so `"3.14t"` is the
   free-threaded 3.14 build. The CI matrix is generated from this list.
-- `packages` lists the packages to test.
+- `packages` lists the packages to install and test, astropy included.
 
 To add or disable a package, edit its entry in `packages.yaml`. Each
 entry takes:
